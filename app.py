@@ -9,6 +9,7 @@ from entity import Driver, Rider
 from entity_gen import EntityGenerator
 from matching import rider_matching
 from state import SimulationState
+from stats import calculate_statistics
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
@@ -27,6 +28,8 @@ eg = EntityGenerator(state)
 drivers: set[Driver] = set()
 idle_riders: set[Rider] = set()
 waiting_riders: set[Rider] = set()
+driver_archive: set[Driver] = set()
+rider_archive: set[Rider] = set()
 eg.start() # starts reoccuring new driver and new rider events generation
 
 while running:
@@ -56,8 +59,10 @@ while running:
             elif event_type == Events.RiderCancelled:
                 idle_riders.discard(rider)
                 waiting_riders.discard(rider)
+                rider_archive.add(rider)
             elif event_type == Events.DriverComplete:
                 drivers.remove(driver)
+                driver_archive.add(driver)
 
     # Simulation logic
     for rider in idle_riders:
@@ -94,3 +99,7 @@ while running:
     clock.tick(30)
 
 pygame.quit()
+
+# Generate total statistics
+stats = calculate_statistics(rider_archive | idle_riders | waiting_riders, driver_archive | drivers)
+pprint(stats, sort_dicts=False)
