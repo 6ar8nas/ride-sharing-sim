@@ -2,7 +2,7 @@
 from typing import Optional
 
 from entity import Driver, Rider
-from routing import brute_force_routing
+from routing import held_karp_pc
 from state import SimulationState
 
 def rider_matching(rider: Rider, drivers: set[Driver], state: SimulationState, current_time: int):
@@ -14,7 +14,7 @@ def rider_matching(rider: Rider, drivers: set[Driver], state: SimulationState, c
     for driver in drivers:
         if driver.vacancies < rider.passenger_count:
             continue
-        route, cost = brute_force_routing(driver.next_node if driver.next_node else driver.current_node, driver.end_node, [(rid.start_node, rid.end_node) for rid in (driver.riders)] + [(rider.start_node, rider.end_node)], state)
+        route, cost = held_karp_pc(driver.next_node if driver.next_node else driver.current_node, driver.end_node, [(rid.start_node, rid.end_node) for rid in (driver.riders)] + [(rider.start_node, rider.end_node)], state)
         if driver.cost_fn(cost, rider.passenger_count) > driver.direct_cost:
             continue
 
