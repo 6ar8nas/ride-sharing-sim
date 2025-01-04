@@ -7,6 +7,7 @@ import pygame
 from constants import Colors, Events
 from entity import Driver, Rider
 from entity_gen import EntityGenerator
+from matching import rider_matching
 from state import SimulationState
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -21,7 +22,7 @@ background: Optional[pygame.Surface] = None
 clock = pygame.time.Clock()
 running = True
 
-state = SimulationState("Kaunas, Lithuania", screen_size)
+state = SimulationState("Vilnius, Lithuania", screen_size)
 eg = EntityGenerator(state)
 drivers: set[Driver] = set()
 idle_riders: set[Rider] = set()
@@ -52,6 +53,9 @@ while running:
                 waiting_riders.remove(rider)
             elif event_type == Events.RiderDropOff:
                 rider_archive.add(rider)
+            elif event_type == Events.RiderCancelled:
+                idle_riders.discard(rider)
+                waiting_riders.discard(rider)
             elif event_type == Events.DriverComplete:
                 drivers.remove(driver)
 
@@ -60,6 +64,9 @@ while running:
         rider_matching(rider, drivers, state, current_time)
     for driver in drivers:
         driver.move(current_time)
+    for rider in idle_riders:
+        if rider.cancel_time <= current_time and rider.matched_time is None:
+            rider.cancel(current_time)
 
     # Drawing
     if background is None:

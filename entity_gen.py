@@ -8,8 +8,8 @@ from entity import Driver, Rider
 from state import SimulationState
 
 class EntityGenerator:
-    rider_frequency = 2
-    driver_frequency = 4
+    rider_frequency = (1, 5)
+    driver_frequency = (1, 8)
 
     def __init__(self, state: SimulationState):
         self.state = state
@@ -23,12 +23,12 @@ class EntityGenerator:
         self.generate_events = True
         def generate_driver():
             while self.generate_events:
-                time.sleep(EntityGenerator.driver_frequency)
+                time.sleep(random.uniform(*EntityGenerator.driver_frequency))
                 self.__new_driver()
 
         def generate_rider():
             while self.generate_events:
-                time.sleep(EntityGenerator.rider_frequency)
+                time.sleep(random.uniform(*EntityGenerator.rider_frequency))
                 self.__new_rider()
 
         self.thread_driver = threading.Thread(target=generate_driver, daemon=True)

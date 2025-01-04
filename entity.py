@@ -29,12 +29,16 @@ class Entity:
         return isinstance(other, Entity) and self.id == other.id
 
 class Rider(Entity):
+    cancel_delay = 10000 # 10s
+
     def __init__(self, start_node: int, end_node: int, departure_time: int, state: SimulationState, passenger_count: int = 1):
         super().__init__(start_node, end_node, departure_time, state)
         self.passenger_count = passenger_count
         self.driver_id: Optional[int] = None
         self.matched_time: Optional[int] = None
         self.boarded_time: Optional[int] = None
+        self.cancelled_time: Optional[int] = None
+        self.cancel_time = departure_time + Rider.cancel_delay
         pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"event_type": Events.NewRider, "rider": self}))
 
     def match_driver(self, driver_id: int, time: int):
@@ -43,6 +47,10 @@ class Rider(Entity):
 
     def board(self, time: int):
         self.boarded_time = time
+
+    def cancel(self, time: int):
+        self.cancelled_time = time
+        pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"event_type": Events.RiderCancelled, "rider": self}))
 
 class Driver(Entity):
     speed = 5
