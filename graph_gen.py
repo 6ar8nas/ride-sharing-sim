@@ -4,9 +4,8 @@ import rustworkx as rx
 import geopandas as gpd
 import osmnx as ox
 
-def map_to_graph(location_name: str, screen_bounds: Tuple[int, int] = (800, 600)) -> Tuple[rx.PyGraph, dict[int, Tuple[float, float]], dict[int, int], dict[Tuple[int, int], float]]:
-    G = ox.graph_from_place(location_name, network_type="drive")
-    rx_graph = rx.PyGraph()
+def map_to_graph(location_name: str, screen_bounds: Tuple[int, int] = (800, 600)) -> Tuple[rx.PyGraph, dict[int, Tuple[float, float]], dict[Tuple[int, int], float]]:
+    G = ox.graph_from_place(location_name, network_type="drive", custom_filter='["highway"~"motorway|trunk|primary|secondary|teriatry"]')
 
     node_ids: dict[int, int] = {}
     nodes_data = [
@@ -21,6 +20,7 @@ def map_to_graph(location_name: str, screen_bounds: Tuple[int, int] = (800, 600)
     gdf['x_norm'] = ((gdf.geometry.x - min_x) / (max_x - min_x)) * screen_bounds[0]
     gdf['y_norm'] = ((max_y - gdf.geometry.y) / (max_y - min_y)) * screen_bounds[1]
 
+    rx_graph = rx.PyGraph()
     nodes: dict[int, Tuple[float, float]] = {}
     for _, row in gdf.iterrows():
         node_ids[row['node_id']] = rx_graph.add_node((row['x_norm'], row['y_norm']))
@@ -31,4 +31,4 @@ def map_to_graph(location_name: str, screen_bounds: Tuple[int, int] = (800, 600)
         rx_graph.add_edge(node_ids[u], node_ids[v], float(data['length']))
         edges[(node_ids[u], node_ids[v])] = float(data['length'])
 
-    return rx_graph, nodes, node_ids, edges
+    return rx_graph, nodes, edges
