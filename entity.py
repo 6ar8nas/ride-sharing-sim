@@ -18,6 +18,7 @@ class Entity:
         self.departure_time = departure_time
         self.completed_time: Optional[int] = None
         self.direct_cost = self.state.shortest_length(start_node, end_node)
+        self.current_cost = self.direct_cost
 
     def complete(self, time: int):
         self.completed_time = time
@@ -29,7 +30,7 @@ class Entity:
         return isinstance(other, Entity) and self.id == other.id
 
 class Rider(Entity):
-    cancel_delay = 10000 # 10s
+    cancel_delay = 15000 # 15s
 
     def __init__(self, start_node: int, end_node: int, departure_time: int, state: SimulationState, passenger_count: int = 1):
         super().__init__(start_node, end_node, departure_time, state)
@@ -41,9 +42,10 @@ class Rider(Entity):
         self.cancel_time = departure_time + Rider.cancel_delay
         pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"event_type": Events.NewRider, "rider": self}))
 
-    def match_driver(self, driver_id: int, time: int):
+    def match_driver(self, driver_id: int, cost: float, time: int):
         self.driver_id = driver_id
         self.matched_time = time
+        self.current_cost = cost
 
     def board(self, time: int):
         self.boarded_time = time
@@ -61,6 +63,7 @@ class Driver(Entity):
         self.passenger_seats = passenger_seats
         self.vacancies = passenger_seats
         self.riders: set[Rider] = set()
+        self.__completed_riders: set[Rider] = set()
         self.route = self.__compute_route([start_node, end_node])
         self.route.pop(0)
         self.next_node, self.next_pos = self.route[0]
@@ -95,12 +98,13 @@ class Driver(Entity):
         if len(self.route) == 0 and self.current_node == self.end_node:
             self.complete(time)
 
-    def match_rider(self, rider: Rider, node_route: list[int], time: int):
+    def match_rider(self, rider: Rider, node_route: list[int], costs: Tuple[float, float], time: int):
         if self.vacancies < rider.passenger_count:
             return
-
+        
+        self.current_cost, rider_cost = costs
         self.vacancies -= rider.passenger_count
-        rider.match_driver(self.id, time)
+        rider.match_driver(self.id, rider_cost, time)
         self.riders.add(rider)
         self.route = self.__compute_route(node_route)
         pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"event_type": Events.RiderMatch, "driver": self, "rider": rider}))
@@ -111,7 +115,9 @@ class Driver(Entity):
 
     def drop_off(self, rider: Rider, time: int):
         rider.complete(time)
+        self.vacancies += rider.passenger_count
         self.riders.discard(rider)
+        self.__completed_riders.add(rider)
         pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"event_type": Events.RiderDropOff, "driver": self, "rider": rider}))
 
     def complete(self, time: int):
@@ -131,5 +137,8 @@ class Driver(Entity):
 
         return full_route
 
-    def cost_fn(self, route_cost: float, new_passengers: int) -> float:
-        return self.total_distance + route_cost / (self.passenger_seats - self.vacancies + 1 + new_passengers)
+    def cost_fn(self, route_cost: float, new_rider: Rider) -> Tuple[float, float]:
+        cost = self.total_distance + route_cost - sum(rider.current_cost for rider in (self.riders | self.__completed_riders))
+        cost_curr = self.current_cost + new_rider.current_cost
+        offset = (cost - cost_curr) / 2
+        return self.current_cost + offset, new_rider.current_cost + offset

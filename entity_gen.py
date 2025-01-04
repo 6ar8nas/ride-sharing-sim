@@ -8,8 +8,8 @@ from entity import Driver, Rider
 from state import SimulationState
 
 class EntityGenerator:
-    rider_frequency = (1, 5)
-    driver_frequency = (1, 8)
+    rider_frequency = (1, 2)
+    driver_frequency = (1, 2)
 
     def __init__(self, state: SimulationState):
         self.state = state

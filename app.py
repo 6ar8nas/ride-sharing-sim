@@ -66,12 +66,12 @@ while running:
 
     # Simulation logic
     for rider in idle_riders:
-        rider_matching(rider, drivers, state, current_time)
-    for driver in drivers:
-        driver.move(current_time)
-    for rider in idle_riders:
         if rider.cancel_time <= current_time and rider.matched_time is None:
             rider.cancel(current_time)
+        else:
+            rider_matching(rider, drivers, state, current_time)
+    for driver in drivers:
+        driver.move(current_time)
 
     # Drawing
     if background is None:
@@ -102,4 +102,4 @@ pygame.quit()
 
 # Generate total statistics
 stats = calculate_statistics(rider_archive | idle_riders | waiting_riders, driver_archive | drivers)
-pprint(stats, sort_dicts=False)
+pprint(stats)
