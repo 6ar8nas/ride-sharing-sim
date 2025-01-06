@@ -55,7 +55,9 @@ def dijkstra_routing(start_node: int, end_node: int, constrained_node_pairs: lis
             if not end_node_remaining:
                 return node_route, cost
             heapq.heappush(routes, (cost, node_route, False, frozenset({(end_node, None)})))
-            min_cost = cost + state.shortest_length(node_route[-1], end_node)
+            final_cost = cost + state.shortest_length(node_route[-1], end_node)
+            if final_cost < min_cost:
+                min_cost = final_cost
             continue
 
         for node, extra_node in available_actions:
@@ -102,24 +104,25 @@ heuristic_functions: dict[Literal["single-link", "nearest-neighbor"], Callable[[
     'nearest-neighbor': nearest_neighbor_heuristic
 }
 
-def branch_bound_routing(start_node: int, end_node: int, constrained_node_pairs: list[Tuple[int, int]], state: SimulationState, heuristic: Literal["single-link", "nearest-neighbor"] = "single-link") -> Tuple[list[int], float]:
+def branch_bound_pc(start_node: int, end_node: int, constrained_node_pairs: list[Tuple[int, int]], state: SimulationState, heuristic: Literal["single-link", "nearest-neighbor"] = "single-link") -> Tuple[list[int], float]:
     routes: list[Tuple[float, list[int], bool, frozenset[Tuple[int, Optional[int]]]]] = [(0, [start_node], True, frozenset(constrained_node_pairs))]
 
-    min_cost = float('inf')
+    best_cost = float('inf')
+    best_route = []
     while routes:
         cost, node_route, end_node_remaining, available_actions = heapq.heappop(routes)
-
         if not available_actions:
-            if not end_node_remaining:
-                return node_route, cost
-            heapq.heappush(routes, (cost, node_route, False, frozenset({(end_node, None)})))
-            min_cost = cost + state.shortest_length(node_route[-1], end_node)
+            if end_node_remaining:
+                heapq.heappush(routes, (cost, node_route, False, frozenset({(end_node, None)})))
+            elif cost < best_cost:
+                best_cost = cost
+                best_route = node_route
             continue
 
         for node, extra_node in available_actions:
             new_cost = cost + state.shortest_length(node_route[-1], node)
             lower_bound = new_cost + heuristic_functions[heuristic](node, available_actions - {(node, extra_node)}, end_node, state)
-            if lower_bound > min_cost:
+            if lower_bound > best_cost:
                 continue
 
             new_route = node_route + [node]
@@ -128,7 +131,7 @@ def branch_bound_routing(start_node: int, end_node: int, constrained_node_pairs:
                 new_actions = new_actions | {(extra_node, None)}
             heapq.heappush(routes, (new_cost, new_route, end_node_remaining, new_actions))
 
-    raise ValueError("No route found")
+    return best_route, best_cost
 
 def brute_force_routing(start_node: int, end_node: int, constrained_node_pairs: list[Tuple[int, int]], state: SimulationState) -> Tuple[list[int], float]:
     def is_valid_route(route: list[Tuple[int, int, int]]) -> bool:

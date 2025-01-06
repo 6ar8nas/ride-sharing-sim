@@ -1,13 +1,13 @@
 import random
 import time
 
-from routing import branch_bound_routing, brute_force_routing, dijkstra_routing, held_karp_pc
+from routing import branch_bound_pc, brute_force_routing, dijkstra_routing, held_karp_pc
 from state import SimulationState
 
 state = SimulationState("Vilnius, Lithuania")
 
-iterations = 100
-intermediary_nodes = 8
+iterations = 1000
+intermediary_nodes = 10
 
 for elem_count in range(0, intermediary_nodes + 1, 2):
     tt1, tt2, tt3, tt4, tt5 = 0, 0, 0, 0, 0
@@ -24,9 +24,9 @@ for elem_count in range(0, intermediary_nodes + 1, 2):
         t2 = time.time()
         _, weight3 = brute_force_routing(sn, en, lst, state)
         t3 = time.time()
-        _, weight4 = branch_bound_routing(sn, en, lst, state, 'single-link')
+        _, weight4 = branch_bound_pc(sn, en, lst, state, 'single-link')
         t4 = time.time()
-        _, weight5 = branch_bound_routing(sn, en, lst, state, 'nearest-neighbor')
+        _, weight5 = branch_bound_pc(sn, en, lst, state, 'nearest-neighbor')
         t5 = time.time()
 
         tt1 += (t1 - t0); tw1 += weight1
