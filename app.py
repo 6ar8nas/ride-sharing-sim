@@ -101,5 +101,5 @@ while running:
 pygame.quit()
 
 # Generate total statistics
-stats = calculate_statistics(rider_archive | idle_riders | waiting_riders, driver_archive | drivers)
+stats = calculate_statistics(rider_archive | idle_riders | waiting_riders, driver_archive | drivers, current_time)
 pprint(stats)
