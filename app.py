@@ -30,7 +30,7 @@ idle_riders: set[Rider] = set()
 waiting_riders: set[Rider] = set()
 driver_archive: set[Driver] = set()
 rider_archive: set[Rider] = set()
-eg.start() # starts reoccuring new driver and new rider events generation
+eg.start() # starts recurring new driver and new rider events generation
 
 while running:
     current_time = pygame.time.get_ticks()

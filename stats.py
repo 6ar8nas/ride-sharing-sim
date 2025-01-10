@@ -15,7 +15,7 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
         "riders_total": total_riders,
         "rider_completed_ratio": completed_riders / total_riders if total_riders else None,
         "rider_cancelled_ratio": cancelled_riders / total_riders if total_riders else None,
-        "rider_trip_time": total_trip_time,
+        "rider_trip_time": total_trip_time / total_riders if total_riders else None,
         "rider_time_matching": total_matching_time / total_trip_time if total_trip_time else None,
         "rider_time_boarding": total_boarding_time / total_trip_time if total_trip_time else None,
         "rider_time_traveling": total_travel_time / total_trip_time if total_trip_time else None,
