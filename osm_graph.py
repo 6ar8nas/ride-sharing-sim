@@ -4,18 +4,20 @@ import rustworkx as rx
 import geopandas as gpd
 import os
 
+from shapely import Point
+
 from screen_coords import ScreenBoundedCoordinates, ScreenBounds
 
 FILE_DIR = "graph_files"
 
 
-class OXGraph:
+class OSMGraph:
     def __init__(
         self,
         location_name: str,
         filters: str = '["highway"~"motorway|trunk|primary|secondary|teriatry"]',
         cache=True,
-        screen_size: tuple[int, int] = (1280, 720),
+        screen_size: tuple[int, int] = (800, 600),
     ):
         super().__init__()
         self.__location = location_name
@@ -26,7 +28,7 @@ class OXGraph:
 
         ox_graph = self.__create_ox_graph()
         nodes_gdf = self.__create_gdf(ox_graph)
-        self.graph, self.nodes, self.edges = self.__build_rx_graph(ox_graph, nodes_gdf)
+        self.graph = self.__build_rx_graph(ox_graph, nodes_gdf)
 
     def __create_ox_graph(self) -> nx.MultiDiGraph:
         if os.path.exists(self.__file_name):
@@ -59,28 +61,25 @@ class OXGraph:
 
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
-    ) -> tuple[
-        rx.PyGraph, dict[int, ScreenBoundedCoordinates], dict[tuple[int, int], float]
-    ]:
-        rx_graph = rx.PyGraph()
+    ) -> rx.PyGraph[ScreenBoundedCoordinates, float]:
+        rx_graph = rx.PyGraph[ScreenBoundedCoordinates, float]()
         node_ids: dict[int, int] = {}
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
-        nodes: dict[int, ScreenBoundedCoordinates] = {}
 
         node_coords = {
-            row["node_id"]: (row.geometry.x, row.geometry.y)
-            for _, row in gdf.iterrows()
+            row.node_id: (row.geometry.x, row.geometry.y)
+            for row in gdf.itertuples(index=False)
+            if isinstance(row.geometry, Point)
         }
         for node_id, (x, y) in node_coords.items():
-            node_ids[node_id] = rx_graph.add_node((x, y))
-            nodes[node_ids[node_id]] = ScreenBoundedCoordinates((x, y), screen_bounds)
+            node_ids[node_id] = rx_graph.add_node(
+                ScreenBoundedCoordinates((x, y), screen_bounds)
+            )
 
-        edges: dict[tuple[int, int], float] = {}
         for u, v in graph.edges():
             x1, y1 = node_coords[u]
             x2, y2 = node_coords[v]
             dist = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
             rx_graph.add_edge(node_ids[u], node_ids[v], dist)
-            edges[(node_ids[u], node_ids[v])] = dist
 
-        return rx_graph, nodes, edges
+        return rx_graph

@@ -14,7 +14,7 @@ class EntityGenerator:
 
     def __init__(self, state: SimulationState):
         self.state = state
-        self.node_ids = list(state.nodes.keys())
+        self.node_ids = list(state.graph.node_indices())
         self.generate_events = False
 
     def start(self):

@@ -21,7 +21,7 @@ class Entity:
         Entity._uid += 1
         self.state = state
         self.start_node, self.end_node = start_node, end_node
-        self.position = self.state.nodes[start_node]
+        self.position = self.state.graph.get_node_data(start_node)
         self.departure_time = departure_time
         self.completed_time: Optional[int] = None
         self.direct_cost = self.state.shortest_length(start_node, end_node)
@@ -182,7 +182,7 @@ class Driver(Entity):
     def __compute_route(
         self, node_route: list[int]
     ) -> list[tuple[int, ScreenBoundedCoordinates]]:
-        full_route = [(node_route[0], self.state.nodes[node_route[0]])]
+        full_route = [(node_route[0], self.state.graph.get_node_data(node_route[0]))]
         for i in range(len(node_route) - 1):
             inter_node = node_route[i]
             dest_node = node_route[i + 1]
@@ -190,7 +190,9 @@ class Driver(Entity):
                 continue
 
             path_seg = self.state.shortest_path(inter_node, dest_node)[1:]
-            full_route.extend((idx, self.state.nodes[idx]) for idx in path_seg)
+            full_route.extend(
+                (idx, self.state.graph.get_node_data(idx)) for idx in path_seg
+            )
 
         return full_route
 

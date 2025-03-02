@@ -1,10 +1,10 @@
 from functools import lru_cache
 import rustworkx as rx
 
-from oxgraph import OXGraph
+from osm_graph import OSMGraph
 
 
-class SimulationState(OXGraph):
+class SimulationState(OSMGraph):
     def __init__(self, location: str, screen_size: tuple[float, float] = (800, 600)):
         super().__init__(location_name=location, screen_size=screen_size)
         self.__shortest_paths = rx.all_pairs_dijkstra_shortest_paths(

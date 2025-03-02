@@ -81,15 +81,15 @@ while running:
     if background is None:
         background = pygame.Surface(screen_size)
         background.fill(Colors.Background.value)
-        for u, v in state.edges.keys():
+        for u, v in state.graph.edge_list():
             pygame.draw.line(
                 background,
                 Colors.Edge.value,
-                state.nodes[u].on_screen,
-                state.nodes[v].on_screen,
+                state.graph.get_node_data(u).on_screen,
+                state.graph.get_node_data(v).on_screen,
                 1,
             )
-        for coord in state.nodes.values():
+        for coord in state.graph.nodes():
             pygame.draw.circle(background, Colors.Building.value, coord.on_screen, 2)
     screen.blit(background, (0, 0))
     for driver in drivers:
@@ -103,13 +103,13 @@ while running:
             pygame.draw.circle(
                 screen,
                 Colors.DestinationPoint.value,
-                state.nodes[rider.end_node].on_screen,
+                state.graph.get_node_data(rider.end_node).on_screen,
                 3,
             )
         pygame.draw.circle(
             screen,
             Colors.DestinationPoint.value,
-            state.nodes[driver.end_node].on_screen,
+            state.graph.get_node_data(driver.end_node).on_screen,
             3,
         )
     for rider in idle_riders:

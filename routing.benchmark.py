@@ -13,8 +13,8 @@ for elem_count in range(0, intermediary_nodes + 1, 2):
     tt1, tt2, tt3, tt4, tt5 = 0, 0, 0, 0, 0
     tw1, tw2, tw3, tw4, tw5 = 0, 0, 0, 0, 0
     for i in range(iterations):
-        sn, en = random.choices(list(state.nodes.keys()), k=2)
-        lst = random.choices(list(state.nodes.keys()), k=elem_count)
+        sn, en = random.choices(list(state.graph.node_indices()), k=2)
+        lst = random.choices(list(state.graph.node_indices()), k=elem_count)
         lst = [(lst[i], lst[i + 1]) for i in range(0, elem_count, 2)]
 
         t0 = time.time()
