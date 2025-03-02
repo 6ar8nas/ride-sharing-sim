@@ -1,13 +1,12 @@
 from functools import lru_cache
-from typing import Tuple
 import rustworkx as rx
 
-from graph_gen import map_to_graph
+from oxgraph import OXGraph
 
 
-class SimulationState:
-    def __init__(self, location: str, screen_size: Tuple[int, int] = (800, 600)):
-        self.graph, self.nodes, self.edges = map_to_graph(location, screen_size)
+class SimulationState(OXGraph):
+    def __init__(self, location: str, screen_size: tuple[float, float] = (800, 600)):
+        super().__init__(location_name=location, screen_size=screen_size)
         self.__shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
             self.graph, edge_cost_fn=lambda e: e
         )

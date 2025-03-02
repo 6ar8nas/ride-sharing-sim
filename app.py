@@ -83,27 +83,41 @@ while running:
         background.fill(Colors.Background.value)
         for u, v in state.edges.keys():
             pygame.draw.line(
-                background, Colors.Edge.value, state.nodes[u], state.nodes[v], 1
+                background,
+                Colors.Edge.value,
+                state.nodes[u].on_screen,
+                state.nodes[v].on_screen,
+                1,
             )
         for coord in state.nodes.values():
-            pygame.draw.circle(background, Colors.Building.value, coord, 2)
+            pygame.draw.circle(background, Colors.Building.value, coord.on_screen, 2)
     screen.blit(background, (0, 0))
     for driver in drivers:
-        pygame.draw.circle(screen, Colors.Driver.value, driver.position, 3)
+        pygame.draw.circle(screen, Colors.Driver.value, driver.position.on_screen, 3)
         if driver.route and len(driver.route) > 0:
-            route = [driver.position] + [coord for _, coord in driver.route]
+            route = [driver.position.on_screen] + [
+                coord.on_screen for _, coord in driver.route
+            ]
             pygame.draw.lines(screen, Colors.Route.value, False, route, 2)
         for rider in driver.riders:
             pygame.draw.circle(
-                screen, Colors.DestinationPoint.value, state.nodes[rider.end_node], 3
+                screen,
+                Colors.DestinationPoint.value,
+                state.nodes[rider.end_node].on_screen,
+                3,
             )
         pygame.draw.circle(
-            screen, Colors.DestinationPoint.value, state.nodes[driver.end_node], 3
+            screen,
+            Colors.DestinationPoint.value,
+            state.nodes[driver.end_node].on_screen,
+            3,
         )
     for rider in idle_riders:
-        pygame.draw.circle(screen, Colors.IdleRider.value, rider.position, 3)
+        pygame.draw.circle(screen, Colors.IdleRider.value, rider.position.on_screen, 3)
     for rider in waiting_riders:
-        pygame.draw.circle(screen, Colors.WaitingRider.value, rider.position, 3)
+        pygame.draw.circle(
+            screen, Colors.WaitingRider.value, rider.position.on_screen, 3
+        )
 
     pygame.display.update()
     clock.tick(30)

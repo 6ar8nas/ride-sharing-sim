@@ -1,6 +1,6 @@
 import heapq
 import itertools
-from typing import Callable, Optional, Tuple, Literal
+from typing import Callable, Optional, Literal
 
 from state import SimulationState
 
@@ -8,9 +8,9 @@ from state import SimulationState
 def held_karp_pc(
     start_node: int,
     end_node: int,
-    constrained_node_pairs: list[Tuple[int, int]],
+    constrained_node_pairs: list[tuple[int, int]],
     state: SimulationState,
-) -> Tuple[list[int], float]:
+) -> tuple[list[int], float]:
     start_city, end_city = 0, 1
     city_node_dict = {start_city: start_node, end_city: end_node} | {
         i + 2: node
@@ -71,11 +71,11 @@ def held_karp_pc(
 def dijkstra_routing(
     start_node: int,
     end_node: int,
-    constrained_node_pairs: list[Tuple[int, int]],
+    constrained_node_pairs: list[tuple[int, int]],
     state: SimulationState,
-) -> Tuple[list[int], float]:
+) -> tuple[list[int], float]:
     routes: list[
-        Tuple[float, list[int], bool, frozenset[Tuple[int, Optional[int]]]]
+        tuple[float, list[int], bool, frozenset[tuple[int, Optional[int]]]]
     ] = [(0, [start_node], True, frozenset(constrained_node_pairs))]
 
     min_cost = float("inf")
@@ -110,7 +110,7 @@ def dijkstra_routing(
 
 def single_link_heuristic(
     current_node: int,
-    available_actions: frozenset[Tuple[int, Optional[int]]],
+    available_actions: frozenset[tuple[int, Optional[int]]],
     end_node: int,
     state: SimulationState,
 ) -> float:
@@ -137,7 +137,7 @@ def single_link_heuristic(
 
 def nearest_neighbor_heuristic(
     current_node: int,
-    available_actions: frozenset[Tuple[int, Optional[int]]],
+    available_actions: frozenset[tuple[int, Optional[int]]],
     end_node: int,
     state: SimulationState,
 ) -> float:
@@ -161,7 +161,7 @@ def nearest_neighbor_heuristic(
 
 heuristic_functions: dict[
     Literal["single-link", "nearest-neighbor"],
-    Callable[[int, frozenset[Tuple[int, Optional[int]]], int, SimulationState], float],
+    Callable[[int, frozenset[tuple[int, Optional[int]]], int, SimulationState], float],
 ] = {
     "single-link": single_link_heuristic,
     "nearest-neighbor": nearest_neighbor_heuristic,
@@ -171,12 +171,12 @@ heuristic_functions: dict[
 def branch_bound_pc(
     start_node: int,
     end_node: int,
-    constrained_node_pairs: list[Tuple[int, int]],
+    constrained_node_pairs: list[tuple[int, int]],
     state: SimulationState,
     heuristic: Literal["single-link", "nearest-neighbor"] = "single-link",
-) -> Tuple[list[int], float]:
+) -> tuple[list[int], float]:
     routes: list[
-        Tuple[float, list[int], bool, frozenset[Tuple[int, Optional[int]]]]
+        tuple[float, list[int], bool, frozenset[tuple[int, Optional[int]]]]
     ] = [(0, [start_node], True, frozenset(constrained_node_pairs))]
 
     best_cost = float("inf")
@@ -215,10 +215,10 @@ def branch_bound_pc(
 def brute_force_routing(
     start_node: int,
     end_node: int,
-    constrained_node_pairs: list[Tuple[int, int]],
+    constrained_node_pairs: list[tuple[int, int]],
     state: SimulationState,
-) -> Tuple[list[int], float]:
-    def is_valid_route(route: list[Tuple[int, int, int]]) -> bool:
+) -> tuple[list[int], float]:
+    def is_valid_route(route: list[tuple[int, int, int]]) -> bool:
         const_sat = set()
         for _, action, id in route:
             if action == 0:
@@ -227,7 +227,7 @@ def brute_force_routing(
                 return False
         return True
 
-    def route_cost(route: list[Tuple[int, int, int]]) -> float:
+    def route_cost(route: list[tuple[int, int, int]]) -> float:
         cost = 0
         current_node = start_node
         for stop in route:

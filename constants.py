@@ -1,4 +1,4 @@
-from enum import Enum, StrEnum
+from enum import StrEnum
 
 
 class Events(StrEnum):
@@ -11,12 +11,12 @@ class Events(StrEnum):
     DriverComplete = "driver-complete"
 
 
-class Colors(Enum):
-    Background = (255, 255, 255)
-    Building = (100, 100, 100)
-    Edge = (140, 140, 140)
-    Driver = (0, 0, 255)
-    IdleRider = (255, 0, 0)
-    WaitingRider = (255, 165, 0)
-    DestinationPoint = (0, 255, 100)
-    Route = (40, 40, 40)
+class Colors(StrEnum):
+    Background = "#ffffff"
+    Building = "#646464"
+    Edge = "#8c8c8c"
+    Driver = "#0000ff"
+    IdleRider = "#ff0000"
+    WaitingRider = "#ffa500"
+    DestinationPoint = "#00ff64"
+    Route = "#282828"

@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 from entity import Driver, Rider
 from routing import held_karp_pc
@@ -13,7 +13,7 @@ def rider_matching(
 
     best_heuristic = rider.current_cost
     best_driver: Optional[Driver] = None
-    best_costs: Optional[Tuple[float, float]] = None
+    best_costs: Optional[tuple[float, float]] = None
     best_route: Optional[list[int]] = None
     for driver in drivers:
         if driver.vacancies < rider.passenger_count:

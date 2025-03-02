@@ -1,8 +1,9 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import pygame
 
 from constants import Events
+from screen_coords import ScreenBoundedCoordinates
 from state import SimulationState
 
 
@@ -19,8 +20,7 @@ class Entity:
         self.id = Entity._uid
         Entity._uid += 1
         self.state = state
-        self.start_node = start_node
-        self.end_node = end_node
+        self.start_node, self.end_node = start_node, end_node
         self.position = self.state.nodes[start_node]
         self.departure_time = departure_time
         self.completed_time: Optional[int] = None
@@ -38,7 +38,7 @@ class Entity:
 
 
 class Rider(Entity):
-    cancel_delay = 15000  # 15s
+    CANCEL_DELAY = 15000  # 15s
 
     def __init__(
         self,
@@ -54,7 +54,7 @@ class Rider(Entity):
         self.matched_time: Optional[int] = None
         self.boarded_time: Optional[int] = None
         self.cancelled_time: Optional[int] = None
-        self.cancel_time = departure_time + Rider.cancel_delay
+        self.cancel_time = departure_time + Rider.CANCEL_DELAY
         pygame.event.post(
             pygame.event.Event(
                 pygame.USEREVENT, {"event_type": Events.NewRider, "rider": self}
@@ -79,7 +79,7 @@ class Rider(Entity):
 
 
 class Driver(Entity):
-    speed = 5
+    speed = 20
 
     def __init__(
         self,
@@ -94,7 +94,7 @@ class Driver(Entity):
         self.passenger_seats = passenger_seats
         self.vacancies = passenger_seats
         self.riders: set[Rider] = set()
-        self.__completed_riders: set[Rider] = set()
+        self.completed_riders: set[Rider] = set()
         self.route = self.__compute_route([start_node, end_node])
         self.route.pop(0)
         self.next_node, self.next_pos = self.route[0]
@@ -109,26 +109,18 @@ class Driver(Entity):
         if self.next_pos is None:
             return
 
-        dx, dy = (
-            self.next_pos[0] - self.position[0],
-            self.next_pos[1] - self.position[1],
+        self.position, distance, reached_dest = self.position.move(
+            self.next_pos, Driver.speed
         )
-        distance = (dx**2 + dy**2) ** 0.5
+        self.total_distance += distance
 
-        if distance <= Driver.speed:
-            self.total_distance += self.state.shortest_length(
-                self.current_node, self.next_node
-            )
-            self.current_node, self.position = self.next_node, self.next_pos
+        if reached_dest:
+            self.current_node = self.next_node
             self.route.pop(0)
             self.next_node, self.next_pos = (
                 self.route[0] if self.route else (None, None)
             )
             self.__on_node(time)
-        else:
-            step_x = Driver.speed * dx / distance
-            step_y = Driver.speed * dy / distance
-            self.position = (self.position[0] + step_x, self.position[1] + step_y)
 
     def __on_node(self, time: int):
         for rider in self.riders.copy():
@@ -141,7 +133,7 @@ class Driver(Entity):
             self.complete(time)
 
     def match_rider(
-        self, rider: Rider, node_route: list[int], costs: Tuple[float, float], time: int
+        self, rider: Rider, node_route: list[int], costs: tuple[float, float], time: int
     ):
         if self.vacancies < rider.passenger_count:
             return
@@ -171,7 +163,7 @@ class Driver(Entity):
         rider.complete(time)
         self.vacancies += rider.passenger_count
         self.riders.discard(rider)
-        self.__completed_riders.add(rider)
+        self.completed_riders.add(rider)
         pygame.event.post(
             pygame.event.Event(
                 pygame.USEREVENT,
@@ -189,7 +181,7 @@ class Driver(Entity):
 
     def __compute_route(
         self, node_route: list[int]
-    ) -> list[Tuple[int, Tuple[float, float]]]:
+    ) -> list[tuple[int, ScreenBoundedCoordinates]]:
         full_route = [(node_route[0], self.state.nodes[node_route[0]])]
         for i in range(len(node_route) - 1):
             inter_node = node_route[i]
@@ -202,13 +194,11 @@ class Driver(Entity):
 
         return full_route
 
-    def cost_fn(self, route_cost: float, new_rider: Rider) -> Tuple[float, float]:
+    def cost_fn(self, route_cost: float, new_rider: Rider) -> tuple[float, float]:
         cost = (
             self.total_distance
             + route_cost
-            - sum(
-                rider.current_cost for rider in (self.riders | self.__completed_riders)
-            )
+            - sum(rider.current_cost for rider in (self.riders | self.completed_riders))
         )
         cost_curr = self.current_cost + new_rider.current_cost
         offset = (cost - cost_curr) / 2
