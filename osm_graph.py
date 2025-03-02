@@ -4,8 +4,6 @@ import rustworkx as rx
 import geopandas as gpd
 import os
 
-from shapely import Point
-
 from screen_coords import ScreenBoundedCoordinates, ScreenBounds
 
 FILE_DIR = "graph_files"
@@ -61,24 +59,22 @@ class OSMGraph:
 
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
-    ) -> rx.PyGraph[ScreenBoundedCoordinates, float]:
-        rx_graph = rx.PyGraph[ScreenBoundedCoordinates, float]()
-        node_ids: dict[int, int] = {}
+    ) -> rx.PyGraph:
+        rx_graph = rx.PyGraph()
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
 
-        node_coords = {
-            row.node_id: (row.geometry.x, row.geometry.y)
-            for row in gdf.itertuples(index=False)
-            if isinstance(row.geometry, Point)
-        }
-        for node_id, (x, y) in node_coords.items():
-            node_ids[node_id] = rx_graph.add_node(
-                ScreenBoundedCoordinates((x, y), screen_bounds)
+        node_ids = {}
+        for _, row in gdf.iterrows():
+            screen_coord = ScreenBoundedCoordinates(
+                (row.geometry.x, row.geometry.y), screen_bounds
             )
+            node_ids[row["node_id"]] = rx_graph.add_node(screen_coord)
 
         for u, v in graph.edges():
-            x1, y1 = node_coords[u]
-            x2, y2 = node_coords[v]
+            x1 = gdf.loc[node_ids[u], "geometry"].x
+            y1 = gdf.loc[node_ids[u], "geometry"].y
+            x2 = gdf.loc[node_ids[v], "geometry"].x
+            y2 = gdf.loc[node_ids[v], "geometry"].y
             dist = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
             rx_graph.add_edge(node_ids[u], node_ids[v], dist)
 
