@@ -1,5 +1,6 @@
 from enum import Enum, StrEnum
 
+
 class Events(StrEnum):
     NewDriver = "new-driver"
     NewRider = "new-rider"
@@ -8,6 +9,7 @@ class Events(StrEnum):
     RiderDropOff = "rider-drop-off"
     RiderCancelled = "rider-cancelled"
     DriverComplete = "driver-complete"
+
 
 class Colors(Enum):
     Background = (255, 255, 255)

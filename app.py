@@ -11,7 +11,7 @@ from matching import rider_matching
 from state import SimulationState
 from stats import calculate_statistics
 
-os.environ['SDL_VIDEO_CENTERED'] = '1'
+os.environ["SDL_VIDEO_CENTERED"] = "1"
 
 pygame.init()
 screen_size = (1280, 720)
@@ -30,7 +30,7 @@ idle_riders: set[Rider] = set()
 waiting_riders: set[Rider] = set()
 driver_archive: set[Driver] = set()
 rider_archive: set[Rider] = set()
-eg.start() # starts recurring new driver and new rider events generation
+eg.start()  # starts recurring new driver and new rider events generation
 
 while running:
     current_time = pygame.time.get_ticks()
@@ -41,10 +41,14 @@ while running:
             running = False
             eg.stop()
         elif event.type == pygame.USEREVENT:
-            event_type = event.dict['event_type']
-            driver: Optional[Driver] = event.dict.get('driver')
-            rider: Optional[Rider] = event.dict.get('rider')
-            pprint(f"[LOG] {current_time}: {event_type:15}" + (f" D{driver.id}" if driver is not None else "") + (f" R{rider.id}" if rider is not None else ""))
+            event_type = event.dict["event_type"]
+            driver: Optional[Driver] = event.dict.get("driver")
+            rider: Optional[Rider] = event.dict.get("rider")
+            pprint(
+                f"[LOG] {current_time}: {event_type:15}"
+                + (f" D{driver.id}" if driver is not None else "")
+                + (f" R{rider.id}" if rider is not None else "")
+            )
             if event_type == Events.NewDriver:
                 drivers.add(driver)
             elif event_type == Events.NewRider:
@@ -78,7 +82,9 @@ while running:
         background = pygame.Surface(screen_size)
         background.fill(Colors.Background.value)
         for u, v in state.edges.keys():
-            pygame.draw.line(background, Colors.Edge.value, state.nodes[u], state.nodes[v], 1)
+            pygame.draw.line(
+                background, Colors.Edge.value, state.nodes[u], state.nodes[v], 1
+            )
         for coord in state.nodes.values():
             pygame.draw.circle(background, Colors.Building.value, coord, 2)
     screen.blit(background, (0, 0))
@@ -88,8 +94,12 @@ while running:
             route = [driver.position] + [coord for _, coord in driver.route]
             pygame.draw.lines(screen, Colors.Route.value, False, route, 2)
         for rider in driver.riders:
-            pygame.draw.circle(screen, Colors.DestinationPoint.value, state.nodes[rider.end_node], 3)
-        pygame.draw.circle(screen, Colors.DestinationPoint.value, state.nodes[driver.end_node], 3)
+            pygame.draw.circle(
+                screen, Colors.DestinationPoint.value, state.nodes[rider.end_node], 3
+            )
+        pygame.draw.circle(
+            screen, Colors.DestinationPoint.value, state.nodes[driver.end_node], 3
+        )
     for rider in idle_riders:
         pygame.draw.circle(screen, Colors.IdleRider.value, rider.position, 3)
     for rider in waiting_riders:
@@ -101,5 +111,7 @@ while running:
 pygame.quit()
 
 # Generate total statistics
-stats = calculate_statistics(rider_archive | idle_riders | waiting_riders, driver_archive | drivers, current_time)
+stats = calculate_statistics(
+    rider_archive | idle_riders | waiting_riders, driver_archive | drivers, current_time
+)
 pprint(stats)
