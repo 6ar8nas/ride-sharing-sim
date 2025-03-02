@@ -13,7 +13,7 @@ class OSMGraph:
     def __init__(
         self,
         location_name: str,
-        filters: str = '["highway"~"motorway|trunk|primary|secondary|teriatry"]',
+        filters: str = '["highway"~"motorway|trunk|primary|secondary|teriatry|unclassified"]',
         cache=True,
         screen_size: tuple[int, int] = (800, 600),
     ):
