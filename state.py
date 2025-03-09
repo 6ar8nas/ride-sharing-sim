@@ -9,8 +9,14 @@ from osm_graph import OSMGraph
 
 
 class SimulationState(OSMGraph):
-    def __init__(self, location: str, screen_size: tuple[float, float] = (800, 600)):
+    def __init__(
+        self,
+        location: str,
+        screen_size: tuple[float, float] = (800, 600),
+        frame_rate: int = 30,
+    ):
         super().__init__(location_name=location, screen_size=screen_size)
+        self.frame_rate = frame_rate
         self.__shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
             self.graph, edge_cost_fn=lambda e: e
         )

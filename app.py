@@ -24,7 +24,7 @@ background: Optional[pygame.Surface] = None
 clock = pygame.time.Clock()
 running = True
 
-state = SimulationState("Vilnius, Lithuania", screen_size)
+state = SimulationState("Vilnius, Lithuania", screen_size, 30)
 eg = EntityGenerator(state)
 drivers: set[Driver] = set()
 idle_riders: set[Rider] = set()
@@ -122,7 +122,7 @@ while running:
         )
 
     pygame.display.update()
-    clock.tick(30)
+    clock.tick(state.frame_rate)
 
 pygame.quit()
 

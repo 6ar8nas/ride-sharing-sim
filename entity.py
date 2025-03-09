@@ -67,7 +67,7 @@ class Rider(Entity):
 
 
 class Driver(Entity):
-    speed = 20
+    SPEED_KMH = 50
 
     def __init__(
         self,
@@ -86,6 +86,7 @@ class Driver(Entity):
         self.route.pop(0)
         self.next_node, self.next_pos = self.route[0]
         self.total_distance = 0
+        self.speed = Driver.SPEED_KMH / 3.6 * (60 / state.frame_rate)
         self.state.post_event(Events.NewDriver, driver=self)
 
     def move(self, time: DateTime):
@@ -93,7 +94,7 @@ class Driver(Entity):
             return
 
         self.position, distance, reached_dest = self.position.move(
-            self.next_pos, Driver.speed
+            self.next_pos, self.speed
         )
         self.total_distance += distance
 
