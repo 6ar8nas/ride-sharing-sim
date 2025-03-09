@@ -14,6 +14,8 @@ class Events(StrEnum):
 class Colors(StrEnum):
     Background = "#ffffff"
     Building = "#646464"
+    CenterArea = "#e3e3e3"
+    ResidentialArea = "#f7faed"
     Edge = "#8c8c8c"
     Driver = "#0000ff"
     IdleRider = "#ff0000"

@@ -13,6 +13,17 @@ class EntityGenerator:
     def __init__(self, state: SimulationState):
         self.state = state
         self.node_ids = list(state.graph.node_indices())
+        self.center_node_ids = list(
+            state.graph.filter_nodes(
+                lambda node: any(
+                    location.is_within_radius(node.coords)
+                    for location in state.center_locations
+                )
+            )
+        )
+        self.outskirt_node_ids = [
+            item for item in self.node_ids if item not in self.center_node_ids
+        ]
         self.generate_events = False
 
     def start(self):

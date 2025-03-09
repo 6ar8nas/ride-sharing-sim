@@ -82,6 +82,10 @@ while running:
     if background is None:
         background = pygame.Surface(screen_size)
         background.fill(Colors.Background.value)
+        for loc in state.center_locations:
+            pygame.draw.ellipse(background, Colors.CenterArea.value, loc.on_screen)
+        for loc in state.residential_areas:
+            pygame.draw.ellipse(background, Colors.ResidentialArea.value, loc.on_screen)
         for u, v in state.graph.edge_list():
             pygame.draw.line(
                 background,

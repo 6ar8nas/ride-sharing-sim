@@ -1,0 +1,74 @@
+[
+  {
+    "city": "Vilnius, Lithuania",
+    "central_areas": [
+      {
+        "name": "Old Town",
+        "center": { "x": 582319.357279, "y": 6061036.320561 },
+        "radius": 3000
+      },
+      {
+        "name": "Technopolis District",
+        "center": { "x": 582493.384743, "y": 6065649.026026 },
+        "radius": 1000
+      },
+      {
+        "name": "Saltoniškių Street",
+        "center": { "x": 581018.062032, "y": 6063494.214062 },
+        "radius": 1000
+      },
+      {
+        "name": "Konstitucijos Avenue",
+        "center": { "x": 582079.825096, "y": 6062981.908496 },
+        "radius": 1000
+      }
+    ],
+    "residential_areas": [
+      {
+        "name": "Saulėtekis, Ožkiniai",
+        "center": { "x": 587054.444319, "y": 6068586.538891 },
+        "radius": 7000
+      },
+      {
+        "name": "Fabijoniškės, Justiniškės, Šnipiškės",
+        "center": { "x": 578822.187409, "y": 6066427.2612 },
+        "radius": 6000
+      },
+      {
+        "name": "Karolniškės, Lazdynai",
+        "center": { "x": 577943.25095, "y": 6061552.536857 },
+        "radius": 5000
+      },
+      {
+        "name": "Žirmūnai, Antakalnis",
+        "center": { "x": 584045.000079, "y": 6064587.71413 },
+        "radius": 2500
+      },
+      {
+        "name": "Žvėrynas",
+        "center": { "x": 580647.391755, "y": 6062742.539956 },
+        "radius": 1000
+      },
+      {
+        "name": "Naujininkai",
+        "center": { "x": 583473.022487, "y": 6054816.131785 },
+        "radius": 10000
+      },
+      {
+        "name": "Pavilnys",
+        "center": { "x": 588391.573463, "y": 6061184.928283 },
+        "radius": 7000
+      },
+      {
+        "name": "Žemieji paneriai",
+        "center": { "x": 575446.035506, "y": 6054899.915488 },
+        "radius": 8000
+      },
+      {
+        "name": "Santariškės",
+        "center": { "x": 582362.375304, "y": 6069178.459415 },
+        "radius": 3000
+      }
+    ]
+  }
+]

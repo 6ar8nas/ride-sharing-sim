@@ -1,10 +1,15 @@
+from dataclasses import dataclass
 import osmnx as ox
 import networkx as nx
 import rustworkx as rx
 import geopandas as gpd
 import os
 
-from screen_coords import ScreenBoundedCoordinates, ScreenBounds
+from coordinates import (
+    ScreenBounds,
+    ScreenBoundedCoordinates,
+    ScreenBoundedCoordinatesRadius,
+)
 
 FILE_DIR = "graph_files"
 
@@ -14,15 +19,20 @@ class OSMGraph:
         self,
         location_name: str,
         filters: str = '["highway"~"motorway|trunk|primary|secondary|teriatry|unclassified"]',
+        center_areas: list[tuple[tuple[float, float], float]] = [],
+        residential_areas: list[tuple[tuple[float, float], float]] = [],
         cache=True,
         screen_size: tuple[int, int] = (800, 600),
     ):
-        super().__init__()
         self.__location = location_name
         self.__file_name = f"{FILE_DIR}/{location_name.split(",")[0] + ".graphml"}"
         self.__filters = filters
+        self.__center_areas = center_areas
+        self.__residential_areas = residential_areas
         self.__cache = cache
         self.__screen_size = screen_size
+        self.center_locations: list[ScreenBoundedCoordinatesRadius] = []
+        self.residential_areas: list[ScreenBoundedCoordinatesRadius] = []
 
         ox_graph = self.__create_ox_graph()
         nodes_gdf = self.__create_gdf(ox_graph)
@@ -59,16 +69,31 @@ class OSMGraph:
 
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
-    ) -> rx.PyGraph[ScreenBoundedCoordinates, float]:
-        rx_graph = rx.PyGraph[ScreenBoundedCoordinates, float]()
+    ) -> rx.PyGraph["CityNode", float]:
+        rx_graph = rx.PyGraph[CityNode, float]()
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
+
+        for coords, radius in self.__center_areas:
+            self.center_locations.append(
+                ScreenBoundedCoordinatesRadius(coords, screen_bounds, radius)
+            )
+        for coords, radius in self.__residential_areas:
+            self.residential_areas.append(
+                ScreenBoundedCoordinatesRadius(coords, screen_bounds, radius)
+            )
 
         node_ids = {}
         for _, row in gdf.iterrows():
-            screen_coord = ScreenBoundedCoordinates(
-                (row.geometry.x, row.geometry.y), screen_bounds
+            coords = (row.geometry.x, row.geometry.y)
+            is_center = any(
+                location.is_within_radius(coords) for location in self.center_locations
             )
-            node_ids[row["node_id"]] = rx_graph.add_node(screen_coord)
+            is_residential = any(
+                location.is_within_radius(coords) for location in self.residential_areas
+            )
+            node_ids[row["node_id"]] = rx_graph.add_node(
+                CityNode(coords, screen_bounds, is_center, is_residential)
+            )
 
         for u, v in graph.edges():
             x1 = gdf.loc[node_ids[u], "geometry"].x
@@ -79,3 +104,9 @@ class OSMGraph:
             rx_graph.add_edge(node_ids[u], node_ids[v], dist)
 
         return rx_graph
+
+
+@dataclass
+class CityNode(ScreenBoundedCoordinates):
+    is_center: bool
+    is_residential: bool

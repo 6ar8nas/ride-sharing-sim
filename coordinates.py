@@ -4,7 +4,6 @@ from typing import Sequence
 
 
 class ScreenBounds:
-
     def __init__(self, total_bounds: Sequence[float], screen_size: tuple[float, float]):
         self.min_x, self.min_y, self.max_x, self.max_y = total_bounds
         self.screen_width, self.screen_height = screen_size
@@ -18,6 +17,12 @@ class ScreenBounds:
             (self.max_y - coords[1]) / (self.max_y - self.min_y)
         ) * self.screen_height
         return x_norm, y_norm
+
+    @lru_cache(maxsize=None)
+    def get_radius(self, distance: float) -> tuple[float, float]:
+        width = distance * self.screen_width / (self.max_x - self.min_x)
+        height = distance * self.screen_height / (self.max_y - self.min_y)
+        return (width, height)
 
 
 @dataclass
@@ -51,3 +56,23 @@ class ScreenBoundedCoordinates:
     @property
     def on_screen(self) -> tuple[float, float]:
         return self.screen_bounds.get_screen_coords(self.coords)
+
+
+@dataclass
+class ScreenBoundedCoordinatesRadius(ScreenBoundedCoordinates):
+    radius: float
+
+    def is_within_radius(self, coords: tuple[float, float]) -> bool:
+        return (self.coords[0] - coords[0]) ** 2 + (
+            self.coords[1] - coords[1]
+        ) ** 2 <= self.radius**2
+
+    @property
+    def on_screen(self) -> tuple[float, float, float, float]:
+        screen_coords = self.screen_bounds.get_screen_coords(self.coords)
+        screen_radius = self.screen_bounds.get_radius(self.radius)
+        return (
+            screen_coords[0] - screen_radius[0] / 2,
+            screen_coords[1] - screen_radius[1] / 2,
+            *screen_radius,
+        )

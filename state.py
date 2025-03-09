@@ -4,6 +4,7 @@ from typing import Optional
 import pygame
 import rustworkx as rx
 
+from parse_data import parse_city_data
 from constants import Events
 from osm_graph import OSMGraph
 
@@ -14,8 +15,15 @@ class SimulationState(OSMGraph):
         location: str,
         screen_size: tuple[float, float] = (800, 600),
         frame_rate: int = 30,
+        data_file_name: str = "city_data.json",
     ):
-        super().__init__(location_name=location, screen_size=screen_size)
+        center_areas, residential_areas = parse_city_data(data_file_name, location)
+        super().__init__(
+            location,
+            center_areas=center_areas,
+            residential_areas=residential_areas,
+            screen_size=screen_size,
+        )
         self.frame_rate = frame_rate
         self.__shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
             self.graph, edge_cost_fn=lambda e: e

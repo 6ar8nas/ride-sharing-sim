@@ -1,7 +1,7 @@
 from typing import Optional
 
 from constants import Events
-from screen_coords import ScreenBoundedCoordinates
+from coordinates import ScreenBoundedCoordinates
 from state import DateTime, SimulationState
 
 
