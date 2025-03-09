@@ -19,6 +19,7 @@ screen = pygame.display.set_mode(screen_size)
 pygame.display.set_caption("Ride Sharing Simulator")
 pygame.display.set_icon(pygame.image.load("assets/icon.png"))
 pygame.event.set_allowed([pygame.QUIT, pygame.USEREVENT])
+font = pygame.font.Font(None, 24)
 background: Optional[pygame.Surface] = None
 clock = pygame.time.Clock()
 running = True
@@ -33,7 +34,7 @@ rider_archive: set[Rider] = set()
 eg.start()  # starts recurring new driver and new rider events generation
 
 while running:
-    current_time = pygame.time.get_ticks()
+    current_time = state.get_time()
 
     # Event processing
     for event in pygame.event.get():
@@ -92,6 +93,7 @@ while running:
         for coord in state.graph.nodes():
             pygame.draw.circle(background, Colors.Building.value, coord.on_screen, 2)
     screen.blit(background, (0, 0))
+    screen.blit(font.render(str(current_time.day_time), 1, Colors.Text.value), (5, 5))
     for driver in drivers:
         pygame.draw.circle(screen, Colors.Driver.value, driver.position.on_screen, 3)
         if driver.route and len(driver.route) > 0:

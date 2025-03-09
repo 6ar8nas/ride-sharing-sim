@@ -20,3 +20,4 @@ class Colors(StrEnum):
     WaitingRider = "#ffa500"
     DestinationPoint = "#00ff64"
     Route = "#282828"
+    Text = "#000000"

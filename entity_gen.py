@@ -2,8 +2,6 @@ import random
 import threading
 import time
 
-import pygame
-
 from entity import Driver, Rider
 from state import SimulationState
 
@@ -51,15 +49,11 @@ class EntityGenerator:
         while start_node == end_node:
             start_node, end_node = random.choices(self.node_ids, k=2)
         [passenger_count] = random.choices([1, 2, 3, 4], [0.15, 0.2, 0.05, 0.6])
-        return Driver(
-            start_node, end_node, pygame.time.get_ticks(), self.state, passenger_count
-        )
+        return Driver(start_node, end_node, self.state, passenger_count)
 
     def __new_rider(self) -> Rider:
         start_node, end_node = 0, 0
         while start_node == end_node:
             start_node, end_node = random.choices(self.node_ids, k=2)
         [riders_count] = random.choices([1, 2, 3], [0.8, 0.15, 0.05])
-        return Rider(
-            start_node, end_node, pygame.time.get_ticks(), self.state, riders_count
-        )
+        return Rider(start_node, end_node, self.state, riders_count)

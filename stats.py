@@ -1,4 +1,6 @@
+from typing import Optional
 from entity import Driver, Rider
+from state import DateTime
 
 
 def calculate_rider_statistics(riders: list[Rider]) -> dict:
@@ -111,7 +113,7 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
 
 
 def calculate_statistics(
-    riders: list[Rider], drivers: list[Driver], current_time: int
+    riders: list[Rider], drivers: list[Driver], current_time: Optional[DateTime]
 ) -> dict:
     rider_stats = calculate_rider_statistics(riders)
     driver_stats = calculate_driver_statistics(drivers)

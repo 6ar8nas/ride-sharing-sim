@@ -59,8 +59,8 @@ class OSMGraph:
 
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
-    ) -> rx.PyGraph:
-        rx_graph = rx.PyGraph()
+    ) -> rx.PyGraph[ScreenBoundedCoordinates, float]:
+        rx_graph = rx.PyGraph[ScreenBoundedCoordinates, float]()
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
 
         node_ids = {}
