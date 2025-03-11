@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Optional
+from typing import Literal, Optional
 
 import pygame
 import rustworkx as rx
@@ -76,3 +76,13 @@ class DateTime(int):
 
     def __add__(self, other: "DateTime") -> "DateTime":
         return DateTime(super().__add__(other))
+
+    def is_within_rush_time(self) -> Literal["Morning", "Evening", False]:
+        if self >= DateTime.from_hms(7, 00, 0) and self <= DateTime.from_hms(10, 0, 0):
+            return "Morning"
+        if self >= DateTime.from_hms(16, 00, 0) and self <= DateTime.from_hms(19, 0, 0):
+            return "Evening"
+        return False
+
+    def is_night_time(self) -> bool:
+        return self < DateTime.from_hms(6, 0, 0)

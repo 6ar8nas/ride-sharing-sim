@@ -3,27 +3,23 @@ import threading
 import time
 
 from entity import Driver, Rider
-from state import SimulationState
+from state import DateTime, SimulationState
 
 
 class EntityGenerator:
-    rider_frequency = (1, 2)
-    driver_frequency = (1, 2)
+    rider_frequency = (1, 3)
+    driver_frequency = (1, 3)
+    rush_hour_frequency_rate = 2
+    night_frequency_rate = 0.4
+    rush_hour_commute_bias = 0.8
 
     def __init__(self, state: SimulationState):
         self.state = state
         self.node_ids = list(state.graph.node_indices())
-        self.center_node_ids = list(
-            state.graph.filter_nodes(
-                lambda node: any(
-                    location.is_within_radius(node.coords)
-                    for location in state.center_locations
-                )
-            )
+        self.residential_node_ids = list(
+            state.graph.filter_nodes(lambda e: e.is_residential)
         )
-        self.outskirt_node_ids = [
-            item for item in self.node_ids if item not in self.center_node_ids
-        ]
+        self.central_node_ids = list(state.graph.filter_nodes(lambda e: e.is_center))
         self.generate_events = False
 
     def start(self):
@@ -34,13 +30,21 @@ class EntityGenerator:
 
         def generate_driver():
             while self.generate_events:
-                time.sleep(random.uniform(*EntityGenerator.driver_frequency))
-                self.__new_driver()
+                current_time = self.state.get_time().day_time
+                sleep_timer = self.__get_sleep_timer(
+                    current_time, EntityGenerator.driver_frequency
+                )
+                time.sleep(sleep_timer)
+                self.__new_driver(current_time)
 
         def generate_rider():
             while self.generate_events:
-                time.sleep(random.uniform(*EntityGenerator.rider_frequency))
-                self.__new_rider()
+                current_time = self.state.get_time().day_time
+                sleep_timer = self.__get_sleep_timer(
+                    current_time, EntityGenerator.rider_frequency
+                )
+                time.sleep(sleep_timer)
+                self.__new_rider(current_time)
 
         self.thread_driver = threading.Thread(target=generate_driver, daemon=True)
         self.thread_driver.start()
@@ -55,16 +59,42 @@ class EntityGenerator:
         self.thread_rider.join()
         self.thread_driver.join()
 
-    def __new_driver(self) -> Driver:
-        start_node, end_node = 0, 0
-        while start_node == end_node:
-            start_node, end_node = random.choices(self.node_ids, k=2)
+    def __new_driver(self, current_time: DateTime) -> Driver:
+        start_node, end_node = self.__generate_nodes(current_time)
         [passenger_count] = random.choices([1, 2, 3, 4], [0.15, 0.2, 0.05, 0.6])
         return Driver(start_node, end_node, self.state, passenger_count)
 
-    def __new_rider(self) -> Rider:
-        start_node, end_node = 0, 0
-        while start_node == end_node:
-            start_node, end_node = random.choices(self.node_ids, k=2)
+    def __new_rider(self, current_time: DateTime) -> Rider:
+        start_node, end_node = self.__generate_nodes(current_time)
         [riders_count] = random.choices([1, 2, 3], [0.8, 0.15, 0.05])
         return Rider(start_node, end_node, self.state, riders_count)
+
+    def __generate_nodes(self, current_time: DateTime) -> tuple[int, int]:
+        start_node, end_node = 0, 0
+        is_rush_hour = current_time.is_within_rush_time()
+        while start_node == end_node:
+            if (
+                is_rush_hour == False
+                or random.random() >= EntityGenerator.rush_hour_commute_bias
+            ):
+                start_node, end_node = random.choices(self.node_ids, k=2)
+                continue
+
+            if is_rush_hour == "Morning":
+                start_node = random.choice(self.residential_node_ids)
+                end_node = random.choice(self.central_node_ids)
+            elif is_rush_hour == "Evening":
+                start_node = random.choice(self.central_node_ids)
+                end_node = random.choice(self.residential_node_ids)
+
+        return start_node, end_node
+
+    def __get_sleep_timer(
+        self, current_time: DateTime, standard_frequency: tuple[float, float]
+    ) -> float:
+        sleep_timer = random.uniform(*standard_frequency)
+        if current_time.is_within_rush_time() != False:
+            sleep_timer /= EntityGenerator.rush_hour_frequency_rate
+        if current_time.is_night_time():
+            sleep_timer /= EntityGenerator.night_frequency_rate
+        return sleep_timer
