@@ -7,23 +7,39 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
     total_riders = len(riders)
     completed_riders = sum(1 for rider in riders if rider.completed_time is not None)
     cancelled_riders = sum(1 for rider in riders if rider.cancelled_time is not None)
-    total_trip_time = sum(
-        r.completed_time - r.departure_time
-        for r in riders
-        if r.completed_time is not None
+    total_trip_time: DateTime = sum(
+        (
+            r.completed_time - r.departure_time
+            for r in riders
+            if r.completed_time is not None
+        ),
+        DateTime(0),
     )
-    total_matching_time = sum(
-        r.matched_time - r.departure_time
-        for r in riders
-        if r.completed_time is not None
+    total_matching_time: DateTime = sum(
+        (
+            r.matched_time - r.departure_time
+            for r in riders
+            if r.completed_time is not None and r.matched_time is not None
+        ),
+        DateTime(0),
     )
-    total_boarding_time = sum(
-        r.boarded_time - r.matched_time for r in riders if r.completed_time is not None
+    total_boarding_time: DateTime = sum(
+        (
+            r.boarded_time - r.matched_time
+            for r in riders
+            if r.completed_time is not None
+            and r.boarded_time is not None
+            and r.matched_time is not None
+        ),
+        DateTime(0),
     )
-    total_travel_time = sum(
-        r.completed_time - r.boarded_time
-        for r in riders
-        if r.completed_time is not None
+    total_travel_time: DateTime = sum(
+        (
+            r.completed_time - r.boarded_time
+            for r in riders
+            if r.completed_time is not None and r.boarded_time is not None
+        ),
+        DateTime(0),
     )
     total_initial_cost = sum(
         r.direct_cost for r in riders if r.completed_time is not None
@@ -38,14 +54,16 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
         "rider_cancelled_ratio": (
             cancelled_riders / total_riders if total_riders else None
         ),
-        "rider_trip_time": total_trip_time / total_riders if total_riders else None,
-        "rider_time_matching": (
+        "rider_time_trip_total": (
+            total_trip_time / completed_riders if completed_riders else None
+        ),
+        "rider_time_ratio_matching": (
             total_matching_time / total_trip_time if total_trip_time else None
         ),
-        "rider_time_boarding": (
+        "rider_time_ratio_boarding": (
             total_boarding_time / total_trip_time if total_trip_time else None
         ),
-        "rider_time_traveling": (
+        "rider_time_ratio_traveling": (
             total_travel_time / total_trip_time if total_trip_time else None
         ),
         "rider_price_ratio": (
@@ -56,13 +74,19 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
 
 def calculate_driver_statistics(drivers: list[Driver]) -> dict:
     total_drivers = len(drivers)
+    completed_drivers = sum(
+        1 for driver in drivers if driver.completed_time is not None
+    )
     drivers_with_passengers = sum(
         1 for driver in drivers if driver.direct_cost != driver.current_cost
     )
-    total_trip_time = sum(
-        driver.completed_time - driver.departure_time
-        for driver in drivers
-        if driver.completed_time is not None
+    total_trip_time: DateTime = sum(
+        (
+            driver.completed_time - driver.departure_time
+            for driver in drivers
+            if driver.completed_time is not None
+        ),
+        DateTime(0),
     )
     total_distance = sum(
         d.total_distance for d in drivers if d.completed_time is not None
@@ -92,7 +116,9 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
         "driver_matched_ratio": (
             drivers_with_passengers / total_drivers if total_drivers else None
         ),
-        "driver_trip_time": total_trip_time / total_drivers if total_drivers else None,
+        "driver_time_trip_total": (
+            total_trip_time / completed_drivers if completed_drivers else None
+        ),
         "driver_distance_ratio": (
             total_distance / total_initial_cost if total_initial_cost else None
         ),

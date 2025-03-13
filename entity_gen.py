@@ -7,11 +7,11 @@ from state import DateTime, SimulationState
 
 
 class EntityGenerator:
-    rider_frequency = (1, 3)
-    driver_frequency = (1, 3)
+    rider_frequency = (2, 4)
+    driver_frequency = (2, 4)
     rush_hour_frequency_rate = 2
-    night_frequency_rate = 0.4
-    rush_hour_commute_bias = 0.8
+    night_frequency_rate = 0.3
+    rush_hour_commute_bias = 0.7
 
     def __init__(self, state: SimulationState):
         self.state = state
@@ -97,4 +97,4 @@ class EntityGenerator:
             sleep_timer /= EntityGenerator.rush_hour_frequency_rate
         if current_time.is_night_time():
             sleep_timer /= EntityGenerator.night_frequency_rate
-        return sleep_timer
+        return sleep_timer / self.state.simulation_speed

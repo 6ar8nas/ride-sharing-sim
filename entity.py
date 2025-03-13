@@ -85,8 +85,13 @@ class Driver(Entity):
         self.route = self.__compute_route([start_node, end_node])
         self.route.pop(0)
         self.next_node, self.next_pos = self.route[0]
-        self.total_distance = 0
-        self.speed = Driver.SPEED_KMH / 3.6 * (60 / state.frame_rate)
+        self.total_distance = 0.0
+        self.speed = (
+            Driver.SPEED_KMH
+            / 3.6
+            * (60 / state.frame_rate)
+            * self.state.simulation_speed
+        )
         self.state.post_event(Events.NewDriver, driver=self)
 
     def move(self, time: DateTime):

@@ -23,8 +23,10 @@ font = pygame.font.Font(None, 24)
 background: Optional[pygame.Surface] = None
 clock = pygame.time.Clock()
 running = True
+frame_rate = 30
+simulation_speed = 4
 
-state = SimulationState("Vilnius, Lithuania", screen_size, 30)
+state = SimulationState("Vilnius, Lithuania", screen_size, frame_rate, simulation_speed)
 eg = EntityGenerator(state)
 drivers: set[Driver] = set()
 idle_riders: set[Rider] = set()
