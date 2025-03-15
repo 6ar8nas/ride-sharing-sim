@@ -3,7 +3,8 @@ import threading
 import time
 
 from entity import Driver, Rider
-from state import DateTime, SimulationState
+from date_time import DateTime
+from state import SimulationState
 
 
 class EntityGenerator:

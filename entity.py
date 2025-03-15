@@ -2,7 +2,8 @@ from typing import Optional
 
 from constants import Events
 from coordinates import ScreenBoundedCoordinates
-from state import DateTime, SimulationState
+from date_time import DateTime
+from state import SimulationState
 
 
 class Entity:
@@ -18,7 +19,7 @@ class Entity:
         Entity._uid += 1
         self.state = state
         self.start_node, self.end_node = start_node, end_node
-        self.position = self.state.graph.get_node_data(start_node)
+        self.position = self.state.graph.get_node_data(start_node).coords
         self.departure_time = self.state.get_time()
         self.completed_time: Optional[DateTime] = None
         self.direct_cost = self.state.shortest_length(start_node, end_node)
@@ -35,7 +36,7 @@ class Entity:
 
 
 class Rider(Entity):
-    CANCEL_DELAY = DateTime.from_hms(0, 15, 0)
+    cancel_delay = DateTime.from_hms(0, 15, 0)
 
     def __init__(
         self,
@@ -50,7 +51,7 @@ class Rider(Entity):
         self.matched_time: Optional[DateTime] = None
         self.boarded_time: Optional[DateTime] = None
         self.cancelled_time: Optional[DateTime] = None
-        self.cancel_time = self.departure_time + Rider.CANCEL_DELAY
+        self.cancel_time = self.departure_time + Rider.cancel_delay
         self.state.post_event(Events.NewRider, rider=self)
 
     def match_driver(self, driver_id: int, cost: float, time: DateTime):
@@ -67,7 +68,7 @@ class Rider(Entity):
 
 
 class Driver(Entity):
-    SPEED_KMH = 50
+    speed_kmh = 50
 
     def __init__(
         self,
@@ -87,7 +88,7 @@ class Driver(Entity):
         self.next_node, self.next_pos = self.route[0]
         self.total_distance = 0.0
         self.speed = (
-            Driver.SPEED_KMH
+            Driver.speed_kmh
             / 3.6
             * (60 / state.frame_rate)
             * self.state.simulation_speed
@@ -156,7 +157,9 @@ class Driver(Entity):
     def __compute_route(
         self, node_route: list[int]
     ) -> list[tuple[int, ScreenBoundedCoordinates]]:
-        full_route = [(node_route[0], self.state.graph.get_node_data(node_route[0]))]
+        full_route = [
+            (node_route[0], self.state.graph.get_node_data(node_route[0]).coords)
+        ]
         for i in range(len(node_route) - 1):
             inter_node = node_route[i]
             dest_node = node_route[i + 1]
@@ -165,7 +168,7 @@ class Driver(Entity):
 
             path_seg = self.state.shortest_path(inter_node, dest_node)[1:]
             full_route.extend(
-                (idx, self.state.graph.get_node_data(idx)) for idx in path_seg
+                (idx, self.state.graph.get_node_data(idx).coords) for idx in path_seg
             )
 
         return full_route

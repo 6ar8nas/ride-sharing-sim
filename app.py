@@ -92,12 +92,14 @@ while running:
             pygame.draw.line(
                 background,
                 Colors.Edge.value,
-                state.graph.get_node_data(u).on_screen,
-                state.graph.get_node_data(v).on_screen,
+                state.graph.get_node_data(u).coords.on_screen,
+                state.graph.get_node_data(v).coords.on_screen,
                 1,
             )
-        for coord in state.graph.nodes():
-            pygame.draw.circle(background, Colors.Building.value, coord.on_screen, 2)
+        for node in state.graph.nodes():
+            pygame.draw.circle(
+                background, Colors.Building.value, node.coords.on_screen, 2
+            )
     screen.blit(background, (0, 0))
     screen.blit(font.render(str(current_time.day_time), 1, Colors.Text.value), (5, 5))
     for driver in drivers:
@@ -111,13 +113,13 @@ while running:
             pygame.draw.circle(
                 screen,
                 Colors.DestinationPoint.value,
-                state.graph.get_node_data(rider.end_node).on_screen,
+                state.graph.get_node_data(rider.end_node).coords.on_screen,
                 3,
             )
         pygame.draw.circle(
             screen,
             Colors.DestinationPoint.value,
-            state.graph.get_node_data(driver.end_node).on_screen,
+            state.graph.get_node_data(driver.end_node).coords.on_screen,
             3,
         )
     for rider in idle_riders:

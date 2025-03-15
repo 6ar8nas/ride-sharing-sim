@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import random
+from typing import Literal
 import osmnx as ox
 import networkx as nx
 import rustworkx as rx
@@ -37,6 +39,7 @@ class OSMGraph:
         ox_graph = self.__create_ox_graph()
         nodes_gdf = self.__create_gdf(ox_graph)
         self.graph = self.__build_rx_graph(ox_graph, nodes_gdf)
+        self.__shortest_paths, self.__shortest_lengths = self.__all_pairs_dijkstras()
 
     def __create_ox_graph(self) -> nx.MultiDiGraph:
         if os.path.exists(self.__file_name):
@@ -69,8 +72,8 @@ class OSMGraph:
 
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
-    ) -> rx.PyGraph["CityNode", float]:
-        rx_graph = rx.PyGraph[CityNode, float]()
+    ) -> rx.PyGraph["CityNode", "CityEdge"]:
+        rx_graph = rx.PyGraph[CityNode, "CityEdge"]()
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
 
         for coords, radius in self.__center_areas:
@@ -92,21 +95,81 @@ class OSMGraph:
                 location.is_within_radius(coords) for location in self.residential_areas
             )
             node_ids[row["node_id"]] = rx_graph.add_node(
-                CityNode(coords, screen_bounds, is_center, is_residential)
+                CityNode(
+                    ScreenBoundedCoordinates(coords, screen_bounds),
+                    is_center,
+                    is_residential,
+                )
             )
 
         for u, v in graph.edges():
-            x1 = gdf.loc[node_ids[u], "geometry"].x
-            y1 = gdf.loc[node_ids[u], "geometry"].y
-            x2 = gdf.loc[node_ids[v], "geometry"].x
-            y2 = gdf.loc[node_ids[v], "geometry"].y
+            node_u = rx_graph.get_node_data(node_ids[u])
+            node_v = rx_graph.get_node_data(node_ids[v])
+
+            x1, y1 = node_u.coords.coords
+            x2, y2 = node_v.coords.coords
             dist = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-            rx_graph.add_edge(node_ids[u], node_ids[v], dist)
+            is_center = node_u.is_center or node_v.is_center
+            is_residential = node_u.is_residential or node_v.is_residential
+
+            rx_graph.add_edge(
+                node_ids[u],
+                node_ids[v],
+                CityEdge(dist, is_center=is_center, is_residential=is_residential),
+            )
 
         return rx_graph
 
+    def __all_pairs_dijkstras(
+        self,
+    ) -> tuple[rx.AllPairsPathMapping, rx.AllPairsPathLengthMapping]:
+        shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
+            self.graph, edge_cost_fn=lambda e: e.distance / e.traffic_flow_rate
+        )
+        shortest_lengths = rx.all_pairs_dijkstra_path_lengths(
+            self.graph, edge_cost_fn=lambda e: e.distance / e.traffic_flow_rate
+        )
+        return shortest_paths, shortest_lengths
+
+    def update_traffic(self, is_rush_hour: Literal["Morning", "Evening", False]):
+        for edge in self.graph.edges():
+            edge.update_traffic(is_rush_hour)
+
+        self.__shortest_paths, self.__shortest_lengths = self.__all_pairs_dijkstras()
+
+    def shortest_length(self, u: int, v: int) -> float:
+        return self.__shortest_lengths[u][v] if u != v else 0
+
+    def shortest_path(self, u: int, v: int) -> list[int]:
+        return self.__shortest_paths[u][v] if u != v else []
+
 
 @dataclass
-class CityNode(ScreenBoundedCoordinates):
+class CityNode:
+    coords: ScreenBoundedCoordinates
     is_center: bool
     is_residential: bool
+
+
+@dataclass
+class CityEdge:
+    distance: float
+    base_speed_limit: float = 50.0
+    traffic_flow_rate: float = 1.0
+    is_center: bool = False
+    is_residential: bool = False
+    congestion_range: tuple[float, float] = field(default_factory=lambda: (0.6, 1.0))
+
+    def update_traffic(self, is_rush_hour: Literal["Morning", "Evening", False]):
+        if self.is_center:
+            if is_rush_hour != False:
+                self.traffic_flow_rate = random.uniform(self.congestion_range[0], 0.8)
+            else:
+                self.traffic_flow_rate = random.uniform(0.9, self.congestion_range[1])
+        elif self.is_residential:
+            if is_rush_hour != False:
+                self.traffic_flow_rate = random.uniform(self.congestion_range[0], 0.85)
+            else:
+                self.traffic_flow_rate = random.uniform(0.95, self.congestion_range[1])
+        else:
+            self.traffic_flow_rate = random.uniform(0.9, 1.0)
