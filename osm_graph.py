@@ -7,6 +7,7 @@ import rustworkx as rx
 import geopandas as gpd
 import os
 
+from date_time import DateTime
 from coordinates import (
     ScreenBounds,
     ScreenBoundedCoordinates,
@@ -61,14 +62,13 @@ class OSMGraph:
             {"node_id": node_id, "x": node["x"], "y": node["y"]}
             for node_id, node in graph.nodes(data=True)
         ]
-        gdf = gpd.GeoDataFrame(
+        return gpd.GeoDataFrame(
             nodes_data,
             geometry=gpd.points_from_xy(
                 [n["x"] for n in nodes_data], [n["y"] for n in nodes_data]
             ),
             crs="EPSG:4326",
         ).to_crs(epsg=3346)
-        return gdf
 
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
@@ -87,7 +87,7 @@ class OSMGraph:
 
         node_ids = {}
         for _, row in gdf.iterrows():
-            coords = (row.geometry.x, row.geometry.y)
+            coords: tuple[float, float] = (row.geometry.x, row.geometry.y)
             is_center = any(
                 location.is_within_radius(coords) for location in self.center_locations
             )
@@ -113,9 +113,7 @@ class OSMGraph:
             is_residential = node_u.is_residential or node_v.is_residential
 
             rx_graph.add_edge(
-                node_ids[u],
-                node_ids[v],
-                CityEdge(dist, is_center=is_center, is_residential=is_residential),
+                node_ids[u], node_ids[v], CityEdge(dist, is_center, is_residential)
             )
 
         return rx_graph
@@ -124,14 +122,15 @@ class OSMGraph:
         self,
     ) -> tuple[rx.AllPairsPathMapping, rx.AllPairsPathLengthMapping]:
         shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
-            self.graph, edge_cost_fn=lambda e: e.distance / e.traffic_flow_rate
+            self.graph, edge_cost_fn=lambda e: e.distance
         )
         shortest_lengths = rx.all_pairs_dijkstra_path_lengths(
-            self.graph, edge_cost_fn=lambda e: e.distance / e.traffic_flow_rate
+            self.graph, edge_cost_fn=lambda e: e.distance
         )
         return shortest_paths, shortest_lengths
 
-    def update_traffic(self, is_rush_hour: Literal["Morning", "Evening", False]):
+    def update_traffic(self, current_time: DateTime):
+        is_rush_hour = current_time.is_within_rush_time()
         for edge in self.graph.edges():
             edge.update_traffic(is_rush_hour)
 
@@ -147,29 +146,22 @@ class OSMGraph:
 @dataclass
 class CityNode:
     coords: ScreenBoundedCoordinates
-    is_center: bool
-    is_residential: bool
+    is_center: bool = False
+    is_residential: bool = False
 
 
 @dataclass
 class CityEdge:
     distance: float
-    base_speed_limit: float = 50.0
-    traffic_flow_rate: float = 1.0
     is_center: bool = False
     is_residential: bool = False
-    congestion_range: tuple[float, float] = field(default_factory=lambda: (0.6, 1.0))
+    base_speed: float = 50.0
+    speed = base_speed
+    congestion_range: tuple[float, float] = field(default_factory=lambda: (0.4, 1.0))
 
     def update_traffic(self, is_rush_hour: Literal["Morning", "Evening", False]):
-        if self.is_center:
-            if is_rush_hour != False:
-                self.traffic_flow_rate = random.uniform(self.congestion_range[0], 0.8)
-            else:
-                self.traffic_flow_rate = random.uniform(0.9, self.congestion_range[1])
-        elif self.is_residential:
-            if is_rush_hour != False:
-                self.traffic_flow_rate = random.uniform(self.congestion_range[0], 0.85)
-            else:
-                self.traffic_flow_rate = random.uniform(0.95, self.congestion_range[1])
+        self.speed = self.base_speed
+        if (self.is_center or self.is_residential) and is_rush_hour != False:
+            self.speed *= random.uniform(*self.congestion_range)
         else:
-            self.traffic_flow_rate = random.uniform(0.9, 1.0)
+            self.speed *= random.uniform(0.9, 1.0)

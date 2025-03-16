@@ -6,7 +6,7 @@ import pygame
 
 from constants import Colors, Events
 from entity import Driver, Rider
-from entity_gen import EntityGenerator
+from simulation_gen import SimulationGenerator
 from matching import rider_matching
 from state import SimulationState
 from stats import calculate_statistics
@@ -27,7 +27,7 @@ frame_rate = 30
 simulation_speed = 4
 
 state = SimulationState("Vilnius, Lithuania", screen_size, frame_rate, simulation_speed)
-eg = EntityGenerator(state)
+eg = SimulationGenerator(state)
 drivers: set[Driver] = set()
 idle_riders: set[Rider] = set()
 waiting_riders: set[Rider] = set()

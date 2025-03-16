@@ -13,14 +13,15 @@ class DateTime(int):
         return DateTime(self % DateTime.sec_per_day)
 
     def is_within_rush_time(self) -> Literal["Morning", "Evening", False]:
-        if self >= DateTime.from_hms(7, 00, 0) and self <= DateTime.from_hms(10, 0, 0):
+        time = self.day_time
+        if time >= DateTime.from_hms(7, 00, 0) and time <= DateTime.from_hms(10, 0, 0):
             return "Morning"
-        if self >= DateTime.from_hms(16, 00, 0) and self <= DateTime.from_hms(19, 0, 0):
+        if time >= DateTime.from_hms(16, 00, 0) and time <= DateTime.from_hms(19, 0, 0):
             return "Evening"
         return False
 
     def is_night_time(self) -> bool:
-        return self < DateTime.from_hms(6, 0, 0)
+        return self.day_time < DateTime.from_hms(6, 0, 0)
 
     def __str__(self) -> str:
         minutes, seconds = divmod(self, 60)

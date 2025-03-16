@@ -9,6 +9,7 @@ class Events(StrEnum):
     RiderDropOff = "rider-drop-off"
     RiderCancelled = "rider-cancelled"
     DriverComplete = "driver-complete"
+    TrafficUpdate = "traffic-update"
 
 
 class Colors(StrEnum):

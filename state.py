@@ -43,3 +43,8 @@ class SimulationState(OSMGraph):
                 {"event_type": event_type, "rider": rider, "driver": driver},
             )
         )
+
+    def update_traffic(self):
+        time = self.get_time()
+        super().update_traffic(time)
+        self.post_event(Events.TrafficUpdate)

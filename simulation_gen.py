@@ -7,12 +7,13 @@ from date_time import DateTime
 from state import SimulationState
 
 
-class EntityGenerator:
+class SimulationGenerator:
     rider_frequency = (2, 4)
     driver_frequency = (2, 4)
     rush_hour_frequency_rate = 2
     night_frequency_rate = 0.3
     rush_hour_commute_bias = 0.7
+    traffic_update_frequency = 15
 
     def __init__(self, state: SimulationState):
         self.state = state
@@ -33,7 +34,7 @@ class EntityGenerator:
             while self.generate_events:
                 current_time = self.state.get_time().day_time
                 sleep_timer = self.__get_sleep_timer(
-                    current_time, EntityGenerator.driver_frequency
+                    current_time, SimulationGenerator.driver_frequency
                 )
                 time.sleep(sleep_timer)
                 self.__new_driver(current_time)
@@ -42,15 +43,23 @@ class EntityGenerator:
             while self.generate_events:
                 current_time = self.state.get_time().day_time
                 sleep_timer = self.__get_sleep_timer(
-                    current_time, EntityGenerator.rider_frequency
+                    current_time, SimulationGenerator.rider_frequency
                 )
                 time.sleep(sleep_timer)
                 self.__new_rider(current_time)
+
+        def reevaluate_traffic():
+            sleep_timer = self.traffic_update_frequency / self.state.simulation_speed
+            while self.generate_events:
+                time.sleep(sleep_timer)
+                self.state.update_traffic()
 
         self.thread_driver = threading.Thread(target=generate_driver, daemon=True)
         self.thread_driver.start()
         self.thread_rider = threading.Thread(target=generate_rider, daemon=True)
         self.thread_rider.start()
+        self.thread_traffic = threading.Thread(target=reevaluate_traffic, daemon=True)
+        self.thread_traffic.start()
 
     def stop(self):
         if not self.generate_events:
@@ -59,6 +68,7 @@ class EntityGenerator:
         self.generate_events = False
         self.thread_rider.join()
         self.thread_driver.join()
+        self.thread_traffic.join()
 
     def __new_driver(self, current_time: DateTime) -> Driver:
         start_node, end_node = self.__generate_nodes(current_time)
@@ -76,7 +86,7 @@ class EntityGenerator:
         while start_node == end_node:
             if (
                 is_rush_hour == False
-                or random.random() >= EntityGenerator.rush_hour_commute_bias
+                or random.random() >= SimulationGenerator.rush_hour_commute_bias
             ):
                 start_node, end_node = random.choices(self.node_ids, k=2)
                 continue
@@ -95,7 +105,7 @@ class EntityGenerator:
     ) -> float:
         sleep_timer = random.uniform(*standard_frequency)
         if current_time.is_within_rush_time() != False:
-            sleep_timer /= EntityGenerator.rush_hour_frequency_rate
+            sleep_timer /= SimulationGenerator.rush_hour_frequency_rate
         if current_time.is_night_time():
-            sleep_timer /= EntityGenerator.night_frequency_rate
+            sleep_timer /= SimulationGenerator.night_frequency_rate
         return sleep_timer / self.state.simulation_speed
