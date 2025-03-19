@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Literal
 
 
@@ -38,16 +37,9 @@ class DateTime(int):
     def __sub__(self, value: "DateTime") -> "DateTime":
         return DateTime(super().__sub__(value))
 
-    def __truediv__(self, value: int | "DateTime") -> float | "DateTime":
+    def __truediv__(self, value):
         if isinstance(value, DateTime):
             return super().__truediv__(value)
         if isinstance(value, int):
             return DateTime(super().__floordiv__(value))
         raise ValueError(f"Unsupported type {type(value)}")
-
-
-@dataclass
-class Area:
-    def __init__(self, center: tuple[float, float], radius: float):
-        self.center = center
-        self.radius = radius

@@ -10,9 +10,10 @@ import os
 from parse_data import parse_city_data
 from utils import DateTime
 from coordinates import (
+    Coordinates,
     ScreenBounds,
+    ScreenBoundedArea,
     ScreenBoundedCoordinates,
-    ScreenBoundedCoordinatesRadius,
 )
 
 FILE_DIR = "graph_files"
@@ -34,8 +35,8 @@ class OSMGraph:
             data_file_name, location_name
         )
 
-        self.center_locations: list[ScreenBoundedCoordinatesRadius] = []
-        self.residential_areas: list[ScreenBoundedCoordinatesRadius] = []
+        self.center_locations: list[ScreenBoundedArea] = []
+        self.residential_areas: list[ScreenBoundedArea] = []
 
         ox_graph = self.__create_ox_graph()
         nodes_gdf = self.__create_gdf(ox_graph)
@@ -77,43 +78,38 @@ class OSMGraph:
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
 
         for area in self.__center_areas:
-            self.center_locations.append(
-                ScreenBoundedCoordinatesRadius(area.center, screen_bounds, area.radius)
-            )
+            self.center_locations.append(ScreenBoundedArea(area, screen_bounds))
         for area in self.__residential_areas:
-            self.residential_areas.append(
-                ScreenBoundedCoordinatesRadius(area.center, screen_bounds, area.radius)
-            )
+            self.residential_areas.append(ScreenBoundedArea(area, screen_bounds))
 
-        node_ids = {}
+        node_ids: dict[int, tuple[int, CityNode]] = {}
         for _, row in gdf.iterrows():
-            coords: tuple[float, float] = (row.geometry.x, row.geometry.y)
+            coords = Coordinates((row.geometry.x, row.geometry.y))
             is_center = any(
                 location.is_within_radius(coords) for location in self.center_locations
             )
             is_residential = any(
                 location.is_within_radius(coords) for location in self.residential_areas
             )
-            node_ids[row["node_id"]] = rx_graph.add_node(
-                CityNode(
-                    ScreenBoundedCoordinates(coords, screen_bounds),
-                    is_center,
-                    is_residential,
-                )
+            node = CityNode(
+                ScreenBoundedCoordinates(coords, screen_bounds),
+                is_center,
+                is_residential,
             )
+            node_ids[row["node_id"]] = rx_graph.add_node(node), node
 
         for u, v in graph.edges():
-            node_u = rx_graph.get_node_data(node_ids[u])
-            node_v = rx_graph.get_node_data(node_ids[v])
+            node_u = node_ids[u][1]
+            node_v = node_ids[v][1]
 
-            x1, y1 = node_u.coords.coords
-            x2, y2 = node_v.coords.coords
-            dist = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+            _, _, dist = node_u.coords.get_offset(node_v.coords)
             is_center = node_u.is_center or node_v.is_center
             is_residential = node_u.is_residential or node_v.is_residential
 
             rx_graph.add_edge(
-                node_ids[u], node_ids[v], CityEdge(dist, is_center, is_residential)
+                node_ids[u][0],
+                node_ids[v][0],
+                CityEdge(dist, is_center, is_residential),
             )
 
         return rx_graph

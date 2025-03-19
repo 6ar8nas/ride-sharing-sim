@@ -1,6 +1,6 @@
 import json
 
-from utils import Area
+from coordinates import Area, Coordinates
 
 
 def parse_city_data(
@@ -20,12 +20,18 @@ def parse_city_data(
 
             for area in city_data["central_areas"]:
                 center_areas.append(
-                    Area((area["center"]["x"], area["center"]["y"]), area["radius"])
+                    Area(
+                        Coordinates((area["center"]["x"], area["center"]["y"])),
+                        area["radius"],
+                    )
                 )
 
             for area in city_data["residential_areas"]:
                 residential_areas.append(
-                    Area((area["center"]["x"], area["center"]["y"]), area["radius"])
+                    Area(
+                        Coordinates((area["center"]["x"], area["center"]["y"])),
+                        area["radius"],
+                    )
                 )
 
             filters = city_data["osm_filters"]
@@ -33,17 +39,17 @@ def parse_city_data(
             return (center_areas, residential_areas, filters)
 
         print(f"Error: City {city_name} data not defined at {file_path}")
-        return [], [], []
+        return [], [], ""
 
     except FileNotFoundError:
         print(f"Error: File not found at {file_path}")
-        return [], []
+        return [], [], ""
     except json.JSONDecodeError:
         print(f"Error: Invalid JSON format in {file_path}")
-        return [], []
+        return [], [], ""
     except KeyError as e:
         print(f"Error: Missing key in JSON: {e}")
-        return [], []
+        return [], [], ""
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        return [], []
+        return [], [], ""
