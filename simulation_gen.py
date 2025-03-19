@@ -3,7 +3,7 @@ import threading
 import time
 
 from entity import Driver, Rider
-from date_time import DateTime
+from utils import DateTime
 from state import SimulationState
 
 

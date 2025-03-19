@@ -7,7 +7,8 @@ import rustworkx as rx
 import geopandas as gpd
 import os
 
-from date_time import DateTime
+from parse_data import parse_city_data
+from utils import DateTime
 from coordinates import (
     ScreenBounds,
     ScreenBoundedCoordinates,
@@ -21,26 +22,25 @@ class OSMGraph:
     def __init__(
         self,
         location_name: str,
-        filters: str = '["highway"~"motorway|trunk|primary|secondary|teriatry|unclassified"]',
-        center_areas: list[tuple[tuple[float, float], float]] = [],
-        residential_areas: list[tuple[tuple[float, float], float]] = [],
+        data_file_name: str,
         cache=True,
         screen_size: tuple[int, int] = (800, 600),
     ):
         self.__location = location_name
         self.__file_name = f"{FILE_DIR}/{location_name.split(",")[0] + ".graphml"}"
-        self.__filters = filters
-        self.__center_areas = center_areas
-        self.__residential_areas = residential_areas
         self.__cache = cache
         self.__screen_size = screen_size
+        self.__center_areas, self.__residential_areas, self.__filters = parse_city_data(
+            data_file_name, location_name
+        )
+
         self.center_locations: list[ScreenBoundedCoordinatesRadius] = []
         self.residential_areas: list[ScreenBoundedCoordinatesRadius] = []
 
         ox_graph = self.__create_ox_graph()
         nodes_gdf = self.__create_gdf(ox_graph)
         self.graph = self.__build_rx_graph(ox_graph, nodes_gdf)
-        self.__shortest_paths, self.__shortest_lengths = self.__all_pairs_dijkstras()
+        self.__update_all_pairs_dijkstras()
 
     def __create_ox_graph(self) -> nx.MultiDiGraph:
         if os.path.exists(self.__file_name):
@@ -73,16 +73,16 @@ class OSMGraph:
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
     ) -> rx.PyGraph["CityNode", "CityEdge"]:
-        rx_graph = rx.PyGraph[CityNode, "CityEdge"]()
+        rx_graph = rx.PyGraph[CityNode, CityEdge]()
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
 
-        for coords, radius in self.__center_areas:
+        for area in self.__center_areas:
             self.center_locations.append(
-                ScreenBoundedCoordinatesRadius(coords, screen_bounds, radius)
+                ScreenBoundedCoordinatesRadius(area.center, screen_bounds, area.radius)
             )
-        for coords, radius in self.__residential_areas:
+        for area in self.__residential_areas:
             self.residential_areas.append(
-                ScreenBoundedCoordinatesRadius(coords, screen_bounds, radius)
+                ScreenBoundedCoordinatesRadius(area.center, screen_bounds, area.radius)
             )
 
         node_ids = {}
@@ -118,23 +118,20 @@ class OSMGraph:
 
         return rx_graph
 
-    def __all_pairs_dijkstras(
-        self,
-    ) -> tuple[rx.AllPairsPathMapping, rx.AllPairsPathLengthMapping]:
-        shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
+    def __update_all_pairs_dijkstras(self):
+        self.__shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
             self.graph, edge_cost_fn=lambda e: e.distance
         )
-        shortest_lengths = rx.all_pairs_dijkstra_path_lengths(
+        self.__shortest_lengths = rx.all_pairs_dijkstra_path_lengths(
             self.graph, edge_cost_fn=lambda e: e.distance
         )
-        return shortest_paths, shortest_lengths
 
     def update_traffic(self, current_time: DateTime):
         is_rush_hour = current_time.is_within_rush_time()
         for edge in self.graph.edges():
             edge.update_traffic(is_rush_hour)
 
-        self.__shortest_paths, self.__shortest_lengths = self.__all_pairs_dijkstras()
+        self.__update_all_pairs_dijkstras()
 
     def shortest_length(self, u: int, v: int) -> float:
         return self.__shortest_lengths[u][v] if u != v else 0

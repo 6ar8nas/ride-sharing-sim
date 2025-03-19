@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Literal
 
 
@@ -5,7 +6,7 @@ class DateTime(int):
     sec_per_day = 86400
 
     @staticmethod
-    def from_hms(hours: int, minutes: int, seconds: int) -> "DateTime":
+    def from_hms(hours: int = 0, minutes: int = 0, seconds: int = 0) -> "DateTime":
         return DateTime(hours * 3600 + minutes * 60 + seconds)
 
     @property
@@ -37,5 +38,16 @@ class DateTime(int):
     def __sub__(self, value: "DateTime") -> "DateTime":
         return DateTime(super().__sub__(value))
 
-    def __truediv__(self, value: int) -> "DateTime":
-        return DateTime(super().__floordiv__(value))
+    def __truediv__(self, value: int | "DateTime") -> float | "DateTime":
+        if isinstance(value, DateTime):
+            return super().__truediv__(value)
+        if isinstance(value, int):
+            return DateTime(super().__floordiv__(value))
+        raise ValueError(f"Unsupported type {type(value)}")
+
+
+@dataclass
+class Area:
+    def __init__(self, center: tuple[float, float], radius: float):
+        self.center = center
+        self.radius = radius

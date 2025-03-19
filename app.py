@@ -7,7 +7,7 @@ import pygame
 from constants import Colors, Events
 from entity import Driver, Rider
 from simulation_gen import SimulationGenerator
-from matching import rider_matching
+from matching import static_rider_matching
 from state import SimulationState
 from stats import calculate_statistics
 
@@ -27,13 +27,13 @@ frame_rate = 30
 simulation_speed = 4
 
 state = SimulationState("Vilnius, Lithuania", screen_size, frame_rate, simulation_speed)
-eg = SimulationGenerator(state)
+sg = SimulationGenerator(state)
 drivers: set[Driver] = set()
 idle_riders: set[Rider] = set()
 waiting_riders: set[Rider] = set()
 driver_archive: set[Driver] = set()
 rider_archive: set[Rider] = set()
-eg.start()  # starts recurring new driver and new rider events generation
+sg.start()  # starts recurring new driver and new rider events generation
 
 while running:
     current_time = state.get_time()
@@ -42,7 +42,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-            eg.stop()
+            sg.stop()
         elif event.type == pygame.USEREVENT:
             event_type = event.dict["event_type"]
             driver: Optional[Driver] = event.dict.get("driver")
@@ -76,7 +76,7 @@ while running:
         if rider.cancel_time <= current_time and rider.matched_time is None:
             rider.cancel(current_time)
         else:
-            rider_matching(rider, drivers, state, current_time)
+            static_rider_matching(rider, drivers, state, current_time)
     for driver in drivers:
         driver.move(current_time)
 

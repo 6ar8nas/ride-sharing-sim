@@ -2,8 +2,7 @@ from typing import Optional
 
 import pygame
 
-from date_time import DateTime
-from parse_data import parse_city_data
+from utils import DateTime
 from constants import Events
 from osm_graph import OSMGraph
 
@@ -17,11 +16,9 @@ class SimulationState(OSMGraph):
         simulation_speed: int = 1,
         data_file_name: str = "city_data.json",
     ):
-        center_areas, residential_areas = parse_city_data(data_file_name, location)
         super().__init__(
             location,
-            center_areas=center_areas,
-            residential_areas=residential_areas,
+            data_file_name,
             screen_size=screen_size,
         )
         self.frame_rate = frame_rate

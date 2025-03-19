@@ -1,33 +1,39 @@
 import json
 
+from utils import Area
+
 
 def parse_city_data(
     file_path: str, city_name: str
-) -> tuple[
-    list[tuple[tuple[float, float], float]], list[tuple[tuple[float, float], float]]
-]:
+) -> tuple[list[Area], list[Area], str]:
     try:
         with open(file_path, "r") as f:
             data_json = json.load(f)
 
-        center_areas: list[tuple[tuple[float, float], float]] = []
-        residential_areas: list[tuple[tuple[float, float], float]] = []
+        center_areas: list[Area] = []
+        residential_areas: list[Area] = []
+        filters: str = ""
 
         for city_data in data_json:
             if city_data["city"] != city_name:
                 continue
 
             for area in city_data["central_areas"]:
-                center = (area["center"]["x"], area["center"]["y"])
-                radius = area["radius"]
-                center_areas.append((center, radius))
+                center_areas.append(
+                    Area((area["center"]["x"], area["center"]["y"]), area["radius"])
+                )
 
             for area in city_data["residential_areas"]:
-                center = (area["center"]["x"], area["center"]["y"])
-                radius = area["radius"]
-                residential_areas.append((center, radius))
+                residential_areas.append(
+                    Area((area["center"]["x"], area["center"]["y"]), area["radius"])
+                )
 
-        return center_areas, residential_areas
+            filters = city_data["osm_filters"]
+
+            return (center_areas, residential_areas, filters)
+
+        print(f"Error: City {city_name} data not defined at {file_path}")
+        return [], [], []
 
     except FileNotFoundError:
         print(f"Error: File not found at {file_path}")

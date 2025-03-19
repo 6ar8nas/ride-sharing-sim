@@ -1,6 +1,6 @@
 from typing import Optional
 from entity import Driver, Rider
-from date_time import DateTime
+from utils import DateTime
 
 
 def calculate_rider_statistics(riders: list[Rider]) -> dict:
@@ -13,7 +13,7 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
             for r in riders
             if r.completed_time is not None
         ),
-        DateTime(0),
+        DateTime(),
     )
     total_matching_time: DateTime = sum(
         (
@@ -21,7 +21,7 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
             for r in riders
             if r.completed_time is not None and r.matched_time is not None
         ),
-        DateTime(0),
+        DateTime(),
     )
     total_boarding_time: DateTime = sum(
         (
@@ -31,7 +31,7 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
             and r.boarded_time is not None
             and r.matched_time is not None
         ),
-        DateTime(0),
+        DateTime(),
     )
     total_travel_time: DateTime = sum(
         (
@@ -39,7 +39,7 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
             for r in riders
             if r.completed_time is not None and r.boarded_time is not None
         ),
-        DateTime(0),
+        DateTime(),
     )
     total_initial_cost = sum(
         r.direct_cost for r in riders if r.completed_time is not None
@@ -86,7 +86,7 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
             for driver in drivers
             if driver.completed_time is not None
         ),
-        DateTime(0),
+        DateTime(),
     )
     total_distance = sum(
         d.total_distance for d in drivers if d.completed_time is not None

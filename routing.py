@@ -232,17 +232,9 @@ def brute_force_routing(
         current_node = start_node
         for stop in route:
             next_node = stop[0]
-            cost += (
-                state.shortest_length(current_node, next_node)
-                if current_node != next_node
-                else 0
-            )
+            cost += state.shortest_length(current_node, next_node)
             current_node = next_node
-        cost += (
-            state.shortest_length(current_node, end_node)
-            if current_node != end_node
-            else 0
-        )
+        cost += state.shortest_length(current_node, end_node)
         return cost
 
     all_possible_routes = itertools.permutations(

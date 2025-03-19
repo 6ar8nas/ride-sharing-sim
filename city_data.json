@@ -1,6 +1,7 @@
 [
   {
     "city": "Vilnius, Lithuania",
+    "osm_filters": "[\"highway\"~\"motorway|trunk|primary|secondary|teriatry|unclassified\"]",
     "central_areas": [
       {
         "name": "Old Town",

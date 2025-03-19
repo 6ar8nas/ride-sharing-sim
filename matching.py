@@ -2,11 +2,11 @@ from typing import Optional
 
 from entity import Driver, Rider
 from routing import held_karp_pc
-from date_time import DateTime
+from utils import DateTime
 from state import SimulationState
 
 
-def rider_matching(
+def static_rider_matching(
     rider: Rider, drivers: set[Driver], state: SimulationState, current_time: DateTime
 ):
     if rider.driver_id is not None:
