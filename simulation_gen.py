@@ -2,6 +2,7 @@ import random
 import threading
 import time
 
+from constants import Events
 from entity import Driver, Rider
 from utils import DateTime
 from state import SimulationState
@@ -37,7 +38,8 @@ class SimulationGenerator:
                     current_time, SimulationGenerator.driver_frequency
                 )
                 time.sleep(sleep_timer)
-                self.__new_driver(current_time)
+                driver = self.__new_driver(current_time)
+                self.state.post_event(Events.NewDriver, driver=driver)
 
         def generate_rider():
             while self.generate_events:
@@ -46,13 +48,15 @@ class SimulationGenerator:
                     current_time, SimulationGenerator.rider_frequency
                 )
                 time.sleep(sleep_timer)
-                self.__new_rider(current_time)
+                rider = self.__new_rider(current_time)
+                self.state.post_event(Events.NewRider, rider=rider)
 
         def reevaluate_traffic():
             sleep_timer = self.traffic_update_frequency / self.state.simulation_speed
             while self.generate_events:
                 time.sleep(sleep_timer)
                 self.state.update_traffic()
+                self.state.post_event(Events.TrafficUpdate)
 
         self.thread_driver = threading.Thread(target=generate_driver, daemon=True)
         self.thread_driver.start()

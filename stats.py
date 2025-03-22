@@ -42,9 +42,11 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
         DateTime(),
     )
     total_initial_cost = sum(
-        r.direct_cost for r in riders if r.completed_time is not None
+        r.shortest_distance for r in riders if r.completed_time is not None
     )
-    total_cost = sum(r.current_cost for r in riders if r.completed_time is not None)
+    total_cost = sum(
+        r.distance_paid_for for r in riders if r.completed_time is not None
+    )
 
     return {
         "riders_total": total_riders,
@@ -78,7 +80,7 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
         1 for driver in drivers if driver.completed_time is not None
     )
     drivers_with_passengers = sum(
-        1 for driver in drivers if driver.direct_cost != driver.current_cost
+        1 for driver in drivers if driver.shortest_distance != driver.distance_paid_for
     )
     total_trip_time: DateTime = sum(
         (
@@ -92,23 +94,25 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
         d.total_distance for d in drivers if d.completed_time is not None
     )
     total_initial_cost = sum(
-        d.direct_cost for d in drivers if d.completed_time is not None
+        d.shortest_distance for d in drivers if d.completed_time is not None
     )
-    total_cost = sum(d.current_cost for d in drivers if d.completed_time is not None)
+    total_cost = sum(
+        d.distance_paid_for for d in drivers if d.completed_time is not None
+    )
     total_involved_distance = sum(
         d.total_distance
         for d in drivers
-        if d.completed_time is not None and d.current_cost != d.direct_cost
+        if d.completed_time is not None and d.distance_paid_for != d.shortest_distance
     )
     total_involved_initial_cost = sum(
-        d.direct_cost
+        d.shortest_distance
         for d in drivers
-        if d.completed_time is not None and d.current_cost != d.direct_cost
+        if d.completed_time is not None and d.distance_paid_for != d.shortest_distance
     )
     total_involved_cost = sum(
-        d.current_cost
+        d.shortest_distance
         for d in drivers
-        if d.completed_time is not None and d.current_cost != d.direct_cost
+        if d.completed_time is not None and d.distance_paid_for != d.shortest_distance
     )
 
     return {
@@ -154,8 +158,8 @@ def calculate_statistics(
         d.total_distance for d in drivers if d.completed_time is not None
     )
     total_direct_distance = sum(
-        r.direct_cost for r in riders if r.completed_time is not None
-    ) + sum(d.direct_cost for d in drivers if d.completed_time is not None)
+        r.shortest_distance for r in riders if r.completed_time is not None
+    ) + sum(d.shortest_distance for d in drivers if d.completed_time is not None)
 
     return (
         rider_stats

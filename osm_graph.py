@@ -41,7 +41,7 @@ class OSMGraph:
         ox_graph = self.__create_ox_graph()
         nodes_gdf = self.__create_gdf(ox_graph)
         self.graph = self.__build_rx_graph(ox_graph, nodes_gdf)
-        self.__update_all_pairs_dijkstras()
+        self.__update_all_pairs_dijkstras(init=True)
 
     def __create_ox_graph(self) -> nx.MultiDiGraph:
         if os.path.exists(self.__file_name):
@@ -73,8 +73,8 @@ class OSMGraph:
 
     def __build_rx_graph(
         self, graph: nx.MultiDiGraph, gdf: gpd.GeoDataFrame
-    ) -> rx.PyGraph["CityNode", "CityEdge"]:
-        rx_graph = rx.PyGraph[CityNode, CityEdge]()
+    ) -> rx.PyDiGraph["CityNode", "CityEdge"]:
+        rx_graph = rx.PyDiGraph[CityNode, CityEdge]()
         screen_bounds = ScreenBounds(gdf.total_bounds, self.__screen_size)
 
         for area in self.__center_areas:
@@ -99,28 +99,51 @@ class OSMGraph:
             node_ids[row["node_id"]] = rx_graph.add_node(node), node
 
         for u, v in graph.edges():
-            node_u = node_ids[u][1]
-            node_v = node_ids[v][1]
+            node_u_idx, node_u = node_ids[u]
+            node_v_idx, node_v = node_ids[v]
 
             _, _, dist = node_u.coords.get_offset(node_v.coords)
             is_center = node_u.is_center or node_v.is_center
             is_residential = node_u.is_residential or node_v.is_residential
 
             rx_graph.add_edge(
-                node_ids[u][0],
-                node_ids[v][0],
-                CityEdge(dist, is_center, is_residential),
+                node_u_idx,
+                node_v_idx,
+                CityEdge(
+                    node_u_idx,
+                    node_v_idx,
+                    node_u.coords,
+                    node_v.coords,
+                    dist,
+                    is_center,
+                    is_residential,
+                ),
+            )
+            rx_graph.add_edge(
+                node_v_idx,
+                node_u_idx,
+                CityEdge(
+                    node_v_idx,
+                    node_u_idx,
+                    node_v.coords,
+                    node_u.coords,
+                    dist,
+                    is_center,
+                    is_residential,
+                ),
             )
 
         return rx_graph
 
-    def __update_all_pairs_dijkstras(self):
+    def __update_all_pairs_dijkstras(self, init=False):
         self.__shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
             self.graph, edge_cost_fn=lambda e: e.distance
         )
-        self.__shortest_lengths = rx.all_pairs_dijkstra_path_lengths(
-            self.graph, edge_cost_fn=lambda e: e.distance
-        )
+        if init == True:
+            # Distances of the graph do not change - there is no need to recompute
+            self.__shortest_distances = rx.all_pairs_dijkstra_path_lengths(
+                self.graph, edge_cost_fn=lambda e: e.distance
+            )
 
     def update_traffic(self, current_time: DateTime):
         is_rush_hour = current_time.is_within_rush_time()
@@ -129,22 +152,30 @@ class OSMGraph:
 
         self.__update_all_pairs_dijkstras()
 
-    def shortest_length(self, u: int, v: int) -> float:
-        return self.__shortest_lengths[u][v] if u != v else 0
+    def shortest_distance(self, u: int, v: int) -> float:
+        return self.__shortest_distances[u][v] if u != v else 0
 
     def shortest_path(self, u: int, v: int) -> list[int]:
         return self.__shortest_paths[u][v] if u != v else []
 
 
-@dataclass
+@dataclass(frozen=True)
 class CityNode:
     coords: ScreenBoundedCoordinates
     is_center: bool = False
     is_residential: bool = False
 
+    @property
+    def on_screen(self) -> tuple[int, int]:
+        return self.coords.on_screen
+
 
 @dataclass
 class CityEdge:
+    starting_node_index: int
+    ending_node_index: int
+    starting_node_coords: ScreenBoundedCoordinates
+    ending_node_coords: ScreenBoundedCoordinates
     distance: float
     is_center: bool = False
     is_residential: bool = False

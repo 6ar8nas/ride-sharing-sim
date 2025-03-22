@@ -48,7 +48,7 @@ def held_karp_pc(
                     continue
 
                 new_subset = subset | (1 << next_city)
-                new_cost = dp[subset][prev_city] + state.shortest_length(
+                new_cost = dp[subset][prev_city] + state.shortest_distance(
                     city_node_dict[prev_city], city_node_dict[next_city]
                 )
                 if new_cost < dp[new_subset][next_city]:
@@ -88,13 +88,13 @@ def dijkstra_routing(
             heapq.heappush(
                 routes, (cost, node_route, False, frozenset({(end_node, None)}))
             )
-            final_cost = cost + state.shortest_length(node_route[-1], end_node)
+            final_cost = cost + state.shortest_distance(node_route[-1], end_node)
             if final_cost < min_cost:
                 min_cost = final_cost
             continue
 
         for node, extra_node in available_actions:
-            new_cost = cost + state.shortest_length(node_route[-1], node)
+            new_cost = cost + state.shortest_distance(node_route[-1], node)
             if new_cost > min_cost:
                 continue
             new_route = node_route + [node]
@@ -114,7 +114,7 @@ def single_link_heuristic(
     end_node: int,
     state: SimulationState,
 ) -> float:
-    lb = state.shortest_length(current_node, end_node)
+    lb = state.shortest_distance(current_node, end_node)
     remaining_nodes = {
         node for node in itertools.chain.from_iterable(available_actions)
     }
@@ -126,7 +126,7 @@ def single_link_heuristic(
 
     lb += sum(
         min(
-            state.shortest_length(node, other)
+            state.shortest_distance(node, other)
             for other in remaining_nodes
             if node != other
         )
@@ -141,7 +141,7 @@ def nearest_neighbor_heuristic(
     end_node: int,
     state: SimulationState,
 ) -> float:
-    lb = state.shortest_length(current_node, end_node)
+    lb = state.shortest_distance(current_node, end_node)
     remaining_nodes = {
         node for node in itertools.chain.from_iterable(available_actions)
     }
@@ -150,9 +150,10 @@ def nearest_neighbor_heuristic(
 
     while remaining_nodes:
         nearest = min(
-            remaining_nodes, key=lambda node: state.shortest_length(current_node, node)
+            remaining_nodes,
+            key=lambda node: state.shortest_distance(current_node, node),
         )
-        lb += state.shortest_length(current_node, nearest)
+        lb += state.shortest_distance(current_node, nearest)
         remaining_nodes.remove(nearest)
         current_node = nearest
 
@@ -194,7 +195,7 @@ def branch_bound_pc(
             continue
 
         for node, extra_node in available_actions:
-            new_cost = cost + state.shortest_length(node_route[-1], node)
+            new_cost = cost + state.shortest_distance(node_route[-1], node)
             lower_bound = new_cost + heuristic_functions[heuristic](
                 node, available_actions - {(node, extra_node)}, end_node, state
             )
@@ -232,9 +233,9 @@ def brute_force_routing(
         current_node = start_node
         for stop in route:
             next_node = stop[0]
-            cost += state.shortest_length(current_node, next_node)
+            cost += state.shortest_distance(current_node, next_node)
             current_node = next_node
-        cost += state.shortest_length(current_node, end_node)
+        cost += state.shortest_distance(current_node, end_node)
         return cost
 
     all_possible_routes = itertools.permutations(

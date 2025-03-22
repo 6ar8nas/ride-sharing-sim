@@ -103,12 +103,15 @@ while running:
     screen.blit(background, (0, 0))
     screen.blit(font.render(str(current_time.day_time), 1, Colors.Text.value), (5, 5))
     for driver in drivers:
-        pygame.draw.circle(screen, Colors.Driver.value, driver.position.on_screen, 3)
-        if driver.route and len(driver.route) > 0:
-            route = [driver.position.on_screen] + [
-                coord.on_screen for _, coord in driver.route
-            ]
+        if driver.route and driver.current_edge is not None:
+            route = [
+                driver.current_edge.on_screen,
+                driver.current_edge.edge.ending_node_coords.on_screen,
+            ] + [coord.ending_node_coords.on_screen for coord in driver.route]
             pygame.draw.lines(screen, Colors.Route.value, False, route, 2)
+            pygame.draw.circle(
+                screen, Colors.Driver.value, driver.current_edge.on_screen, 3
+            )
         for rider in driver.riders:
             pygame.draw.circle(
                 screen,

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from constants import Events
-from coordinates import ScreenBoundedCoordinates
+from osm_graph import CityEdge
 from utils import DateTime
 from state import SimulationState
 
@@ -16,14 +16,13 @@ class Entity:
         state: SimulationState,
     ):
         self.id = Entity._uid
+        self.start_node, self.end_node = start_node, end_node
         Entity._uid += 1
         self.state = state
-        self.start_node, self.end_node = start_node, end_node
-        self.position = self.state.graph.get_node_data(start_node).coords
         self.departure_time = self.state.get_time()
         self.completed_time: Optional[DateTime] = None
-        self.direct_cost = self.state.shortest_length(start_node, end_node)
-        self.current_cost = self.direct_cost
+        self.shortest_distance = self.state.shortest_distance(start_node, end_node)
+        self.distance_paid_for = self.shortest_distance
 
     def complete(self, time: DateTime):
         self.completed_time = time
@@ -47,17 +46,17 @@ class Rider(Entity):
     ):
         super().__init__(start_node, end_node, state)
         self.passenger_count = passenger_count
+        self.position = self.state.graph.get_node_data(start_node)
         self.driver_id: Optional[int] = None
         self.matched_time: Optional[DateTime] = None
         self.boarded_time: Optional[DateTime] = None
         self.cancelled_time: Optional[DateTime] = None
         self.cancel_time = self.departure_time + Rider.cancel_delay
-        self.state.post_event(Events.NewRider, rider=self)
 
     def match_driver(self, driver_id: int, cost: float, time: DateTime):
         self.driver_id = driver_id
         self.matched_time = time
-        self.current_cost = cost
+        self.distance_paid_for = cost
 
     def board(self, time: DateTime):
         self.boarded_time = time
@@ -78,48 +77,34 @@ class Driver(Entity):
         passenger_seats: int = 4,
     ):
         super().__init__(start_node, end_node, state)
-        self.current_node = start_node
-        self.passenger_seats = passenger_seats
-        self.vacancies = passenger_seats
-        self.riders: set[Rider] = set()
-        self.completed_riders: set[Rider] = set()
+        self.passenger_seats, self.vacancies = passenger_seats, passenger_seats
+        self.riders, self.completed_riders = set[Rider](), set[Rider]()
         self.route = self.__compute_route([start_node, end_node])
-        self.route.pop(0)
-        self.next_node, self.next_pos = self.route[0]
+        self.current_edge = ActiveEdge(self.route.pop(0))
         self.total_distance = 0.0
-        self.speed = (
-            Driver.speed_kmh
-            / 3.6
-            * (60 / state.frame_rate)
-            * self.state.simulation_speed
-        )
         self.state.post_event(Events.NewDriver, driver=self)
 
     def move(self, time: DateTime):
-        if self.next_pos is None:
+        if self.current_edge is None:
             return
 
-        self.position, distance, reached_dest = self.position.move(
-            self.next_pos, self.speed
-        )
+        distance, reached_dest = self.current_edge.move(self.state.speed_ratio)
         self.total_distance += distance
 
         if reached_dest:
-            self.current_node = self.next_node
-            self.route.pop(0)
-            self.next_node, self.next_pos = (
-                self.route[0] if self.route else (None, None)
+            self.__on_node(self.current_edge.edge.ending_node_index, time)
+            self.current_edge = (
+                ActiveEdge(self.route.pop(0)) if len(self.route) > 0 else None
             )
-            self.__on_node(time)
 
-    def __on_node(self, time: DateTime):
+    def __on_node(self, node_idx: int, time: DateTime):
         for rider in self.riders.copy():
-            if rider.boarded_time is None and rider.start_node == self.current_node:
+            if rider.boarded_time is None and rider.start_node == node_idx:
                 self.pick_up(rider, time)
-            elif rider.boarded_time is not None and rider.end_node == self.current_node:
+            elif rider.boarded_time is not None and rider.end_node == node_idx:
                 self.drop_off(rider, time)
 
-        if len(self.route) == 0 and self.current_node == self.end_node:
+        if len(self.route) == 0 and self.end_node == node_idx:
             self.complete(time)
 
     def match_rider(
@@ -132,7 +117,7 @@ class Driver(Entity):
         if self.vacancies < rider.passenger_count:
             return
 
-        self.current_cost, rider_cost = costs
+        self.distance_paid_for, rider_cost = costs
         self.vacancies -= rider.passenger_count
         rider.match_driver(self.id, rider_cost, time)
         self.riders.add(rider)
@@ -154,31 +139,46 @@ class Driver(Entity):
         super().complete(time)
         self.state.post_event(Events.DriverComplete, driver=self)
 
-    def __compute_route(
-        self, node_route: list[int]
-    ) -> list[tuple[int, ScreenBoundedCoordinates]]:
-        full_route = [
-            (node_route[0], self.state.graph.get_node_data(node_route[0]).coords)
-        ]
+    def __compute_route(self, node_route: list[int]) -> list[CityEdge]:
+        full_route = [node_route[0]]
         for i in range(len(node_route) - 1):
             inter_node = node_route[i]
             dest_node = node_route[i + 1]
             if inter_node == dest_node:
                 continue
 
-            path_seg = self.state.shortest_path(inter_node, dest_node)[1:]
-            full_route.extend(
-                (idx, self.state.graph.get_node_data(idx).coords) for idx in path_seg
-            )
+            full_route.extend(self.state.shortest_path(inter_node, dest_node)[1:])
 
-        return full_route
+        return [
+            self.state.graph.get_edge_data(full_route[i], full_route[i + 1])
+            for i in range(len(full_route) - 1)
+        ]
 
     def cost_fn(self, route_cost: float, new_rider: Rider) -> tuple[float, float]:
         cost = (
             self.total_distance
             + route_cost
-            - sum(rider.current_cost for rider in (self.riders | self.completed_riders))
+            - sum(
+                rider.distance_paid_for
+                for rider in (self.riders | self.completed_riders)
+            )
         )
-        cost_curr = self.current_cost + new_rider.current_cost
+        cost_curr = self.distance_paid_for + new_rider.distance_paid_for
         offset = (cost - cost_curr) / 2
-        return self.current_cost + offset, new_rider.current_cost + offset
+        return self.distance_paid_for + offset, new_rider.distance_paid_for + offset
+
+
+class ActiveEdge:
+    def __init__(self, edge: CityEdge):
+        self.edge = edge
+        self.current_position = edge.starting_node_coords
+
+    def move(self, speed_ratio: float) -> tuple["ActiveEdge", float, bool]:
+        self.current_position, distance, is_reached_goal = self.current_position.move(
+            self.edge.ending_node_coords, self.edge.speed * speed_ratio
+        )
+        return distance, is_reached_goal
+
+    @property
+    def on_screen(self) -> tuple[int, int]:
+        return self.current_position.on_screen

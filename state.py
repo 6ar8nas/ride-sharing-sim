@@ -23,6 +23,7 @@ class SimulationState(OSMGraph):
         )
         self.frame_rate = frame_rate
         self.simulation_speed = simulation_speed
+        self.speed_ratio = (60 / frame_rate) * simulation_speed / 3.6
 
     def get_time(self) -> "DateTime":
         # 1 real-life minute = 1 in-simulation hour on base simulation_speed
@@ -44,4 +45,3 @@ class SimulationState(OSMGraph):
     def update_traffic(self):
         time = self.get_time()
         super().update_traffic(time)
-        self.post_event(Events.TrafficUpdate)

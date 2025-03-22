@@ -12,27 +12,27 @@ def static_rider_matching(
     if rider.driver_id is not None:
         return
 
-    best_heuristic = rider.current_cost
+    best_heuristic = rider.distance_paid_for
     best_driver: Optional[Driver] = None
     best_costs: Optional[tuple[float, float]] = None
     best_route: Optional[list[int]] = None
     for driver in drivers:
-        if driver.vacancies < rider.passenger_count:
+        if driver.vacancies < rider.passenger_count or driver.current_edge is None:
             continue
 
         route, route_cost = held_karp_pc(
-            driver.next_node if driver.next_node else driver.current_node,
+            driver.current_edge.edge.ending_node_index,
             driver.end_node,
             [(rid.start_node, rid.end_node) for rid in (driver.riders)]
             + [(rider.start_node, rider.end_node)],
             state,
         )
         driver_cost, rider_cost = driver.cost_fn(route_cost, rider)
-        if rider_cost + driver_cost - driver.current_cost > best_heuristic:
+        if rider_cost + driver_cost - driver.distance_paid_for > best_heuristic:
             continue
 
         best_driver, best_route = driver, route
-        best_heuristic = rider_cost + driver_cost - driver.current_cost
+        best_heuristic = rider_cost + driver_cost - driver.distance_paid_for
         best_costs = (driver_cost, rider_cost)
 
     if best_driver is None:
