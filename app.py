@@ -70,6 +70,10 @@ while running:
             elif event_type == Events.DriverComplete:
                 drivers.remove(driver)
                 driver_archive.add(driver)
+            elif event_type == Events.TrafficUpdate:
+                state.update_traffic(current_time)
+                for driver in drivers:
+                    driver.reroute()
 
     # Simulation logic
     for rider in idle_riders:

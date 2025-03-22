@@ -2,6 +2,7 @@ from typing import Optional
 
 from constants import Events
 from osm_graph import CityEdge
+from routing import held_karp_pc
 from utils import DateTime
 from state import SimulationState
 
@@ -82,7 +83,6 @@ class Driver(Entity):
         self.route = self.__compute_route([start_node, end_node])
         self.current_edge = ActiveEdge(self.route.pop(0))
         self.total_distance = 0.0
-        self.state.post_event(Events.NewDriver, driver=self)
 
     def move(self, time: DateTime):
         if self.current_edge is None:
@@ -154,15 +154,45 @@ class Driver(Entity):
             for i in range(len(full_route) - 1)
         ]
 
-    def cost_fn(self, route_cost: float, new_rider: Rider) -> tuple[float, float]:
-        cost = (
+    def reroute(self):
+        if self.current_edge is None:
+            return False
+
+        route, route_cost = held_karp_pc(
+            self.current_edge.edge.ending_node_index,
+            self.end_node,
+            [
+                (
+                    (rid.start_node, rid.end_node)
+                    if rid.boarded_time is None
+                    else (rid.end_node, self.end_node)
+                )
+                for rid in (self.riders)
+            ],
+            self.state,
+        )
+        driver_cost = self.cost_fn(route_cost)
+        if driver_cost >= self.distance_paid_for:
+            return False
+
+        self.route = self.__compute_route(route)
+        return True
+
+    def cost_fn(self, route_cost: float) -> float:
+        return (
             self.total_distance
+            + self.current_edge.remaining_distance
             + route_cost
             - sum(
                 rider.distance_paid_for
                 for rider in (self.riders | self.completed_riders)
             )
         )
+
+    def cost_fn_new_rider(
+        self, route_cost: float, new_rider: Rider
+    ) -> tuple[float, float]:
+        cost = self.cost_fn(route_cost)
         cost_curr = self.distance_paid_for + new_rider.distance_paid_for
         offset = (cost - cost_curr) / 2
         return self.distance_paid_for + offset, new_rider.distance_paid_for + offset
@@ -172,11 +202,13 @@ class ActiveEdge:
     def __init__(self, edge: CityEdge):
         self.edge = edge
         self.current_position = edge.starting_node_coords
+        self.remaining_distance = self.edge.distance
 
-    def move(self, speed_ratio: float) -> tuple["ActiveEdge", float, bool]:
+    def move(self, speed_ratio: float) -> tuple[float, bool]:
         self.current_position, distance, is_reached_goal = self.current_position.move(
             self.edge.ending_node_coords, self.edge.speed * speed_ratio
         )
+        self.remaining_distance -= distance
         return distance, is_reached_goal
 
     @property

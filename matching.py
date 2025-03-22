@@ -23,11 +23,18 @@ def static_rider_matching(
         route, route_cost = held_karp_pc(
             driver.current_edge.edge.ending_node_index,
             driver.end_node,
-            [(rid.start_node, rid.end_node) for rid in (driver.riders)]
+            [
+                (
+                    (rid.start_node, rid.end_node)
+                    if rid.boarded_time is None
+                    else (rid.end_node, driver.end_node)
+                )
+                for rid in (driver.riders)
+            ]
             + [(rider.start_node, rider.end_node)],
             state,
         )
-        driver_cost, rider_cost = driver.cost_fn(route_cost, rider)
+        driver_cost, rider_cost = driver.cost_fn_new_rider(route_cost, rider)
         if rider_cost + driver_cost - driver.distance_paid_for > best_heuristic:
             continue
 
