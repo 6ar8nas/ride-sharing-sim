@@ -137,7 +137,15 @@ class OSMGraph:
 
     def __update_all_pairs_dijkstras(self, init=False):
         self.__shortest_paths = rx.all_pairs_dijkstra_shortest_paths(
-            self.graph, edge_cost_fn=lambda e: e.distance
+            self.graph, edge_cost_fn=lambda e: e.distance / e.speed
+        )
+        # Hacking to get around the fact that rustworkx does not support tuple edge cost functions
+        self.__shortest_path_distances = rx.all_pairs_dijkstra_path_lengths(
+            self.graph, edge_cost_fn=lambda e: ((1000 * e.distance) / e.speed)
+        )
+        self.__shortest_path_distances_hacked = rx.all_pairs_dijkstra_path_lengths(
+            self.graph,
+            edge_cost_fn=lambda e: ((1000 * e.distance) / e.speed) + e.distance,
         )
         if init == True:
             # Distances of the graph do not change - there is no need to recompute
@@ -149,14 +157,26 @@ class OSMGraph:
         is_rush_hour = current_time.is_within_rush_time()
         for edge in self.graph.edges():
             edge.update_traffic(is_rush_hour)
+            self.graph.update_edge(
+                edge.starting_node_index, edge.ending_node_index, edge
+            )
 
         self.__update_all_pairs_dijkstras()
 
     def shortest_distance(self, u: int, v: int) -> float:
-        return self.__shortest_distances[u][v] if u != v else 0
+        return self.__shortest_distances[u][v] if u != v else 0.0
 
     def shortest_path(self, u: int, v: int) -> list[int]:
         return self.__shortest_paths[u][v] if u != v else []
+
+    def shortest_path_distance(self, u: int, v: int) -> float:
+        if u == v:
+            return 0.0
+
+        return (
+            self.__shortest_path_distances_hacked[u][v]
+            - self.__shortest_path_distances[u][v]
+        )
 
 
 @dataclass(frozen=True)
@@ -181,11 +201,12 @@ class CityEdge:
     is_residential: bool = False
     base_speed: float = 50.0
     speed = base_speed
-    congestion_range: tuple[float, float] = field(default_factory=lambda: (0.4, 1.0))
+    rush_congestion: tuple[float, float] = field(default_factory=lambda: (0.5, 0.9))
+    relaxed_congestion: tuple[float, float] = field(default_factory=lambda: (0.9, 1.0))
 
     def update_traffic(self, is_rush_hour: Literal["Morning", "Evening", False]):
         self.speed = self.base_speed
         if (self.is_center or self.is_residential) and is_rush_hour != False:
-            self.speed *= random.uniform(*self.congestion_range)
+            self.speed *= random.uniform(*self.rush_congestion)
         else:
-            self.speed *= random.uniform(0.9, 1.0)
+            self.speed *= random.uniform(*self.relaxed_congestion)

@@ -41,10 +41,10 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
         ),
         DateTime(),
     )
-    total_initial_cost = sum(
-        r.shortest_distance for r in riders if r.completed_time is not None
+    total_single_trip_distance = sum(
+        r.single_trip_distance for r in riders if r.completed_time is not None
     )
-    total_cost = sum(
+    total_distance_paid_for = sum(
         r.distance_paid_for for r in riders if r.completed_time is not None
     )
 
@@ -59,17 +59,19 @@ def calculate_rider_statistics(riders: list[Rider]) -> dict:
         "rider_time_trip_total": (
             total_trip_time / completed_riders if completed_riders else None
         ),
-        "rider_time_ratio_matching": (
-            total_matching_time / total_trip_time if total_trip_time else None
+        "rider_time_matching": (
+            total_matching_time / completed_riders if completed_riders else None
         ),
-        "rider_time_ratio_boarding": (
-            total_boarding_time / total_trip_time if total_trip_time else None
+        "rider_time_boarding": (
+            total_boarding_time / completed_riders if completed_riders else None
         ),
-        "rider_time_ratio_traveling": (
-            total_travel_time / total_trip_time if total_trip_time else None
+        "rider_time_traveling": (
+            total_travel_time / completed_riders if completed_riders else None
         ),
         "rider_price_ratio": (
-            total_cost / total_initial_cost if total_initial_cost else None
+            total_distance_paid_for / total_single_trip_distance
+            if total_single_trip_distance
+            else None
         ),
     }
 
@@ -80,7 +82,9 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
         1 for driver in drivers if driver.completed_time is not None
     )
     drivers_with_passengers = sum(
-        1 for driver in drivers if driver.shortest_distance != driver.distance_paid_for
+        1
+        for driver in drivers
+        if len(driver.completed_riders) > 0 and driver.completed_time is not None
     )
     total_trip_time: DateTime = sum(
         (
@@ -93,8 +97,8 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
     total_distance = sum(
         d.total_distance for d in drivers if d.completed_time is not None
     )
-    total_initial_cost = sum(
-        d.shortest_distance for d in drivers if d.completed_time is not None
+    total_single_trip_distance = sum(
+        d.single_trip_distance for d in drivers if d.completed_time is not None
     )
     total_cost = sum(
         d.distance_paid_for for d in drivers if d.completed_time is not None
@@ -102,41 +106,45 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
     total_involved_distance = sum(
         d.total_distance
         for d in drivers
-        if d.completed_time is not None and d.distance_paid_for != d.shortest_distance
+        if len(d.completed_riders) > 0 and d.completed_time is not None
     )
-    total_involved_initial_cost = sum(
-        d.shortest_distance
+    total_involved_single_trip_distance = sum(
+        d.single_trip_distance
         for d in drivers
-        if d.completed_time is not None and d.distance_paid_for != d.shortest_distance
+        if len(d.completed_riders) > 0 and d.completed_time is not None
     )
     total_involved_cost = sum(
-        d.shortest_distance
+        d.distance_paid_for
         for d in drivers
-        if d.completed_time is not None and d.distance_paid_for != d.shortest_distance
+        if len(d.completed_riders) > 0 and d.completed_time is not None
     )
 
     return {
         "drivers_total": total_drivers,
-        "driver_matched_ratio": (
+        "driver_involved_ratio": (
             drivers_with_passengers / total_drivers if total_drivers else None
         ),
         "driver_time_trip_total": (
             total_trip_time / completed_drivers if completed_drivers else None
         ),
         "driver_distance_ratio": (
-            total_distance / total_initial_cost if total_initial_cost else None
+            total_distance / total_single_trip_distance
+            if total_single_trip_distance
+            else None
         ),
         "driver_distance_involved_ratio": (
-            total_involved_distance / total_involved_initial_cost
-            if total_involved_initial_cost
+            total_involved_distance / total_involved_single_trip_distance
+            if total_involved_single_trip_distance
             else None
         ),
         "driver_price_ratio": (
-            total_cost / total_initial_cost if total_initial_cost else None
+            total_cost / total_single_trip_distance
+            if total_single_trip_distance
+            else None
         ),
         "driver_price_involved_ratio": (
-            total_involved_cost / total_involved_initial_cost
-            if total_involved_initial_cost
+            total_involved_cost / total_involved_single_trip_distance
+            if total_involved_single_trip_distance
             else None
         ),
     }
@@ -154,25 +162,25 @@ def calculate_statistics(
     total_passengers = sum(
         r.passenger_count for r in riders if r.completed_time is not None
     )
-    total_distance = sum(
-        d.total_distance for d in drivers if d.completed_time is not None
-    )
-    total_direct_distance = sum(
-        r.shortest_distance for r in riders if r.completed_time is not None
-    ) + sum(d.shortest_distance for d in drivers if d.completed_time is not None)
+    total_no_traffic_distance = sum(
+        d.shortest_distance for d in drivers if d.completed_time is not None
+    ) + sum(r.shortest_distance for r in riders if r.completed_time is not None)
+    total_traffic_distance = sum(
+        d.single_trip_distance for d in drivers if d.completed_time is not None
+    ) + sum(r.single_trip_distance for r in riders if r.completed_time is not None)
 
     return (
         rider_stats
         | driver_stats
         | {
             "simulation_runtime": current_time,
-            "total_distance_ratio": (
-                total_distance / total_direct_distance
-                if total_direct_distance
-                else None
-            ),
             "seat_occupancy_rate": (
                 total_passengers / total_seats if total_seats else None
+            ),
+            "traffic_distance_increase": (
+                (total_traffic_distance / total_no_traffic_distance) - 1
+                if total_no_traffic_distance
+                else None
             ),
         }
     )

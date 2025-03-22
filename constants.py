@@ -7,7 +7,7 @@ class Events(StrEnum):
     RiderMatch = "rider-match"
     RiderPickup = "rider-pickup"
     RiderDropOff = "rider-drop-off"
-    RiderCancelled = "rider-cancelled"
+    RiderCancel = "rider-cancel"
     DriverComplete = "driver-complete"
     TrafficUpdate = "traffic-update"
 

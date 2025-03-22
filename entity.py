@@ -23,7 +23,8 @@ class Entity:
         self.departure_time = self.state.get_time()
         self.completed_time: Optional[DateTime] = None
         self.shortest_distance = self.state.shortest_distance(start_node, end_node)
-        self.distance_paid_for = self.shortest_distance
+        self.distance_paid_for = self.state.shortest_path_distance(start_node, end_node)
+        self.single_trip_distance = self.distance_paid_for
 
     def complete(self, time: DateTime):
         self.completed_time = time
@@ -64,7 +65,7 @@ class Rider(Entity):
 
     def cancel(self, time: DateTime):
         self.cancelled_time = time
-        self.state.post_event(Events.RiderCancelled, rider=self)
+        self.state.post_event(Events.RiderCancel, rider=self)
 
 
 class Driver(Entity):
@@ -154,9 +155,9 @@ class Driver(Entity):
             for i in range(len(full_route) - 1)
         ]
 
-    def reroute(self):
+    def recalculate_route(self):
         if self.current_edge is None:
-            return False
+            return
 
         route, route_cost = held_karp_pc(
             self.current_edge.edge.ending_node_index,
@@ -171,12 +172,9 @@ class Driver(Entity):
             ],
             self.state,
         )
-        driver_cost = self.cost_fn(route_cost)
-        if driver_cost >= self.distance_paid_for:
-            return False
-
+        self.distance_paid_for = self.cost_fn(route_cost)
         self.route = self.__compute_route(route)
-        return True
+        return
 
     def cost_fn(self, route_cost: float) -> float:
         return (

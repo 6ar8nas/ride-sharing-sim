@@ -1,5 +1,6 @@
 import os
 from pprint import pprint
+import random
 from typing import Optional
 
 import pygame
@@ -12,6 +13,10 @@ from state import SimulationState
 from stats import calculate_statistics
 
 os.environ["SDL_VIDEO_CENTERED"] = "1"
+
+# Set this for deterministic simulation results
+random_seed: Optional[int] = None
+random.seed(random_seed)
 
 pygame.init()
 screen_size = (1280, 720)
@@ -63,7 +68,7 @@ while running:
                 waiting_riders.remove(rider)
             elif event_type == Events.RiderDropOff:
                 rider_archive.add(rider)
-            elif event_type == Events.RiderCancelled:
+            elif event_type == Events.RiderCancel:
                 idle_riders.discard(rider)
                 waiting_riders.discard(rider)
                 rider_archive.add(rider)
@@ -73,7 +78,7 @@ while running:
             elif event_type == Events.TrafficUpdate:
                 state.update_traffic(current_time)
                 for driver in drivers:
-                    driver.reroute()
+                    driver.recalculate_route()
 
     # Simulation logic
     for rider in idle_riders:
@@ -92,12 +97,12 @@ while running:
             pygame.draw.ellipse(background, Colors.CenterArea.value, loc.on_screen)
         for loc in state.residential_areas:
             pygame.draw.ellipse(background, Colors.ResidentialArea.value, loc.on_screen)
-        for u, v in state.graph.edge_list():
+        for edge in state.graph.edges():
             pygame.draw.line(
                 background,
                 Colors.Edge.value,
-                state.graph.get_node_data(u).coords.on_screen,
-                state.graph.get_node_data(v).coords.on_screen,
+                edge.starting_node_coords.on_screen,
+                edge.ending_node_coords.on_screen,
                 1,
             )
         for node in state.graph.nodes():

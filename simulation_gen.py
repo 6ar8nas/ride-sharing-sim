@@ -33,29 +33,26 @@ class SimulationGenerator:
 
         def generate_driver():
             while self.generate_events:
-                current_time = self.state.get_time().day_time
                 sleep_timer = self.__get_sleep_timer(
-                    current_time, SimulationGenerator.driver_frequency
+                    self.state.get_time(), SimulationGenerator.driver_frequency
                 )
                 time.sleep(sleep_timer)
-                driver = self.__new_driver(current_time)
+                driver = self.__new_driver(self.state.get_time())
                 self.state.post_event(Events.NewDriver, driver=driver)
 
         def generate_rider():
             while self.generate_events:
-                current_time = self.state.get_time().day_time
                 sleep_timer = self.__get_sleep_timer(
-                    current_time, SimulationGenerator.rider_frequency
+                    self.state.get_time(), SimulationGenerator.rider_frequency
                 )
                 time.sleep(sleep_timer)
-                rider = self.__new_rider(current_time)
+                rider = self.__new_rider(self.state.get_time())
                 self.state.post_event(Events.NewRider, rider=rider)
 
         def reevaluate_traffic():
             sleep_timer = self.traffic_update_frequency / self.state.simulation_speed
             while self.generate_events:
                 time.sleep(sleep_timer)
-                self.state.update_traffic()
                 self.state.post_event(Events.TrafficUpdate)
 
         self.thread_driver = threading.Thread(target=generate_driver, daemon=True)
@@ -107,9 +104,10 @@ class SimulationGenerator:
     def __get_sleep_timer(
         self, current_time: DateTime, standard_frequency: tuple[float, float]
     ) -> float:
+        day_time = current_time.day_time
         sleep_timer = random.uniform(*standard_frequency)
-        if current_time.is_within_rush_time() != False:
+        if day_time.is_within_rush_time() != False:
             sleep_timer /= SimulationGenerator.rush_hour_frequency_rate
-        if current_time.is_night_time():
+        if day_time.is_night_time():
             sleep_timer /= SimulationGenerator.night_frequency_rate
         return sleep_timer / self.state.simulation_speed
