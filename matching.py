@@ -17,7 +17,7 @@ def static_rider_matching(
     best_costs: Optional[tuple[float, float]] = None
     best_route: Optional[list[int]] = None
     for driver in drivers:
-        if driver.vacancies < rider.passenger_count or driver.current_edge is None:
+        if driver.vacancies == 0 or driver.current_edge is None:
             continue
 
         route, route_cost = held_karp_pc(

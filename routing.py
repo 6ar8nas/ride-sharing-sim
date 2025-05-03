@@ -10,6 +10,7 @@ def held_karp_pc(
     end_node: int,
     constrained_node_pairs: list[tuple[int, int]],
     state: SimulationState,
+    threshold: float = float("inf"),
 ) -> tuple[list[int], float]:
     start_city, end_city = 0, 1
     city_node_dict = {start_city: start_node, end_city: end_node} | {
@@ -18,9 +19,9 @@ def held_karp_pc(
     }
 
     n = len(city_node_dict)
-    float_inf_arr, none_arr, range_2n = [float("inf")], [None], range(2, n)
+    threshold_arr, none_arr, range_2n = [threshold], [None], range(2, n)
     dp: list[list[Optional[float]]] = [
-        float_inf_arr * n if i % 2 else None for i in range(1 << n)
+        threshold_arr * n if i % 2 else None for i in range(1 << n)
     ]
     parent: list[list[Optional[int]]] = [
         none_arr * n if i % 2 else None for i in range(1 << n)

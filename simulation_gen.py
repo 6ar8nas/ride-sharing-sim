@@ -78,8 +78,7 @@ class SimulationGenerator:
 
     def __new_rider(self, current_time: DateTime) -> Rider:
         start_node, end_node = self.__generate_nodes(current_time)
-        [riders_count] = random.choices([1, 2, 3], [0.8, 0.15, 0.05])
-        return Rider(start_node, end_node, self.state, riders_count)
+        return Rider(start_node, end_node, self.state)
 
     def __generate_nodes(self, current_time: DateTime) -> tuple[int, int]:
         start_node, end_node = 0, 0

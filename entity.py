@@ -44,10 +44,8 @@ class Rider(Entity):
         start_node: int,
         end_node: int,
         state: SimulationState,
-        passenger_count: int = 1,
     ):
         super().__init__(start_node, end_node, state)
-        self.passenger_count = passenger_count
         self.position = self.state.graph.get_node_data(start_node)
         self.driver_id: Optional[int] = None
         self.matched_time: Optional[DateTime] = None
@@ -114,16 +112,18 @@ class Driver(Entity):
         node_route: list[int],
         costs: tuple[float, float],
         time: DateTime,
+        compute_routes: bool = True,
     ):
-        if self.vacancies < rider.passenger_count:
+        if self.vacancies == 0:
             return
 
         self.distance_paid_for, rider_cost = costs
-        self.vacancies -= rider.passenger_count
+        self.vacancies -= 1
         rider.match_driver(self.id, rider_cost, time)
         self.riders.add(rider)
-        self.route = self.__compute_route(node_route)
         self.state.post_event(Events.RiderMatch, driver=self, rider=rider)
+        if compute_routes:
+            self.route = self.__compute_route(node_route)
 
     def pick_up(self, rider: Rider, time: DateTime):
         rider.board(time)
@@ -131,7 +131,7 @@ class Driver(Entity):
 
     def drop_off(self, rider: Rider, time: DateTime):
         rider.complete(time)
-        self.vacancies += rider.passenger_count
+        self.vacancies += 1
         self.riders.discard(rider)
         self.completed_riders.add(rider)
         self.state.post_event(Events.RiderDropOff, driver=self, rider=rider)
