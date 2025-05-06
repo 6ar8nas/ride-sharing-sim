@@ -106,9 +106,12 @@ class RideSharingPSOInstance:
         rids = [riders[i] for i in best_indices]
         return rids, *gbest_val
 
-    def match_riders(self, drivers: set[Driver], riders: set[Rider]):
+    def match_riders(
+        self, drivers: set[Driver], riders: set[Rider]
+    ) -> tuple[int, float]:
+        matches = 0
+        expected_savings = 0.0
         unmatched = {r.id: r for r in riders}
-
         candidates: list[tuple[Driver, list[Rider], float, list[int], float]] = []
         for driver in drivers:
             if (
@@ -172,3 +175,7 @@ class RideSharingPSOInstance:
                     time,
                     idx == riders_count - 1,
                 )
+            expected_savings += savings_pp * len(unmatched_riders)
+            matches += len(unmatched_riders)
+
+        return matches, expected_savings

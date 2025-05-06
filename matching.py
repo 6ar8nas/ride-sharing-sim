@@ -11,12 +11,14 @@ def static_rider_matching(
     drivers: set[Driver],
     state: SimulationState,
     current_time: DateTime,
-):
+) -> tuple[int, float]:
+    matches = 0
+    expected_savings = 0.0
     for rider in riders:
         if rider.driver_id is not None:
             continue
 
-        best_heuristic = rider.distance_paid_for
+        best_heuristic = 0
         best_driver: Optional[Driver] = None
         best_costs: Optional[tuple[float, float]] = None
         best_route: Optional[list[int]] = None
@@ -38,15 +40,20 @@ def static_rider_matching(
                 + [(rider.start_node, rider.end_node)],
                 state,
             )
-            driver_cost, rider_cost = driver.cost_fn_new_rider(route_cost, rider)
-            if rider_cost + driver_cost - driver.distance_paid_for > best_heuristic:
+
+            heuristic = rider.distance_paid_for + driver.distance_paid_for - route_cost
+            if heuristic < best_heuristic:
                 continue
 
             best_driver, best_route = driver, route
-            best_heuristic = rider_cost + driver_cost - driver.distance_paid_for
-            best_costs = (driver_cost, rider_cost)
+            best_heuristic = heuristic
+            best_costs = driver.cost_fn_new_rider(route_cost, rider)
 
         if best_driver is None:
             continue
 
         best_driver.match_rider(rider, best_route, best_costs, current_time)
+        matches += 1
+        expected_savings += best_heuristic
+
+    return matches, expected_savings

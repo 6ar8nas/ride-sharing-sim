@@ -4,7 +4,7 @@ import time
 from routing import branch_bound_pc, brute_force_routing, dijkstra_routing, held_karp_pc
 from state import SimulationState
 
-state = SimulationState("Vilnius, Lithuania")
+state = SimulationState("Vilnius, Lithuania", benchmarking=True)
 
 iterations = 1000
 intermediary_nodes = 10

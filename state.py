@@ -15,6 +15,7 @@ class SimulationState(OSMGraph):
         frame_rate: int = 30,
         simulation_speed: int = 1,
         data_file_name: str = "city_data.json",
+        benchmarking: bool = False,
     ):
         super().__init__(
             location,
@@ -24,6 +25,7 @@ class SimulationState(OSMGraph):
         self.frame_rate = frame_rate
         self.simulation_speed = simulation_speed
         self.speed_ratio = (60 / frame_rate) * simulation_speed / 3.6
+        self.benchmarking = benchmarking
 
     def get_time(self) -> "DateTime":
         # 1 real-life minute = 1 in-simulation hour on base simulation_speed
@@ -35,10 +37,12 @@ class SimulationState(OSMGraph):
         rider: Optional["Rider"] = None,  # type: ignore
         driver: Optional["Driver"] = None,  # type: ignore
     ):
-        pass
-        # pygame.event.post(
-        #     pygame.event.Event(
-        #         pygame.USEREVENT,
-        #         {"event_type": event_type, "rider": rider, "driver": driver},
-        #     )
-        # )
+        if self.benchmarking:
+            return
+
+        pygame.event.post(
+            pygame.event.Event(
+                pygame.USEREVENT,
+                {"event_type": event_type, "rider": rider, "driver": driver},
+            )
+        )
