@@ -159,9 +159,7 @@ def calculate_statistics(
     total_seats = sum(
         d.passenger_seats for d in drivers if d.completed_time is not None
     )
-    total_passengers = sum(
-        r.passenger_count for r in riders if r.completed_time is not None
-    )
+    total_passengers = sum(1 for r in riders if r.completed_time is not None)
     total_no_traffic_distance = sum(
         d.shortest_distance for d in drivers if d.completed_time is not None
     ) + sum(r.shortest_distance for r in riders if r.completed_time is not None)

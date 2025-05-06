@@ -37,7 +37,7 @@ class SimulationGenerator:
                     self.state.get_time(), SimulationGenerator.driver_frequency
                 )
                 time.sleep(sleep_timer)
-                driver = self.__new_driver(self.state.get_time())
+                driver = self.new_driver(self.state.get_time())
                 self.state.post_event(Events.NewDriver, driver=driver)
 
         def generate_rider():
@@ -46,7 +46,7 @@ class SimulationGenerator:
                     self.state.get_time(), SimulationGenerator.rider_frequency
                 )
                 time.sleep(sleep_timer)
-                rider = self.__new_rider(self.state.get_time())
+                rider = self.new_rider(self.state.get_time())
                 self.state.post_event(Events.NewRider, rider=rider)
 
         def reevaluate_traffic():
@@ -71,12 +71,12 @@ class SimulationGenerator:
         self.thread_driver.join()
         self.thread_traffic.join()
 
-    def __new_driver(self, current_time: DateTime) -> Driver:
+    def new_driver(self, current_time: DateTime) -> Driver:
         start_node, end_node = self.__generate_nodes(current_time)
         [passenger_count] = random.choices([1, 2, 3, 4], [0.15, 0.2, 0.05, 0.6])
         return Driver(start_node, end_node, self.state, passenger_count)
 
-    def __new_rider(self, current_time: DateTime) -> Rider:
+    def new_rider(self, current_time: DateTime) -> Rider:
         start_node, end_node = self.__generate_nodes(current_time)
         return Rider(start_node, end_node, self.state)
 

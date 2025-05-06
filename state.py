@@ -35,9 +35,10 @@ class SimulationState(OSMGraph):
         rider: Optional["Rider"] = None,  # type: ignore
         driver: Optional["Driver"] = None,  # type: ignore
     ):
-        pygame.event.post(
-            pygame.event.Event(
-                pygame.USEREVENT,
-                {"event_type": event_type, "rider": rider, "driver": driver},
-            )
-        )
+        pass
+        # pygame.event.post(
+        #     pygame.event.Event(
+        #         pygame.USEREVENT,
+        #         {"event_type": event_type, "rider": rider, "driver": driver},
+        #     )
+        # )

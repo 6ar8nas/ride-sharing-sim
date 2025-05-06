@@ -29,7 +29,7 @@ class RideSharingPSOInstance:
         if k == 0:
             return orig_dist, [], 0.0
         if k > driver.vacancies:
-            return float("inf"), [], 0.0
+            return 0.0, [], 0.0
         orig_dist = orig_dist + sum(rider.distance_paid_for for rider in riders)
         route, route_cost = held_karp_pc(
             driver.current_edge.edge.ending_node_index,
@@ -47,7 +47,7 @@ class RideSharingPSOInstance:
             orig_dist,
         )
         if route_cost > orig_dist:
-            return float("inf"), [], 0.0
+            return 0.0, [], 0.0
         return orig_dist - route_cost, route, route_cost
 
     def _driver_pso(
@@ -106,20 +106,28 @@ class RideSharingPSOInstance:
         rids = [riders[i] for i in best_indices]
         return rids, *gbest_val
 
-    def match_riders(self, drivers: list[Driver], riders: list[Rider]):
+    def match_riders(self, drivers: set[Driver], riders: set[Rider]):
         unmatched = {r.id: r for r in riders}
 
         candidates: list[tuple[Driver, list[Rider], float, list[int], float]] = []
         for driver in drivers:
-            if driver.vacancies <= 0:
+            if (
+                driver.vacancies <= 0
+                or driver.current_edge.edge.ending_node_index == driver.end_node
+            ):
                 continue
+
             orig_dist = self.state.shortest_path_distance(
                 driver.current_edge.edge.ending_node_index, driver.end_node
             )
 
             compat: list[Rider] = []
             for rider in riders:
-                if rider.id not in unmatched or rider.matched_time is not None:
+                if (
+                    rider.id not in unmatched
+                    or rider.matched_time is not None
+                    or rider.cancelled_time is not None
+                ):
                     continue
 
                 pickup_route = self.state.shortest_path_distance(
@@ -144,7 +152,11 @@ class RideSharingPSOInstance:
             unmatched_riders: list[Rider] = []
             riders_count = 0
             for idx, rid in enumerate(rids):
-                if idx < dr.vacancies and rid.id in unmatched:
+                if (
+                    idx < dr.vacancies
+                    and rid.id in unmatched
+                    and rid.cancelled_time is None
+                ):
                     unmatched.pop(rid.id, None)
                     unmatched_riders.append(rid)
                     riders_count += 1

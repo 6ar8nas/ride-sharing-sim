@@ -7,42 +7,46 @@ from state import SimulationState
 
 
 def static_rider_matching(
-    rider: Rider, drivers: set[Driver], state: SimulationState, current_time: DateTime
+    riders: set[Rider],
+    drivers: set[Driver],
+    state: SimulationState,
+    current_time: DateTime,
 ):
-    if rider.driver_id is not None:
-        return
-
-    best_heuristic = rider.distance_paid_for
-    best_driver: Optional[Driver] = None
-    best_costs: Optional[tuple[float, float]] = None
-    best_route: Optional[list[int]] = None
-    for driver in drivers:
-        if driver.vacancies == 0 or driver.current_edge is None:
+    for rider in riders:
+        if rider.driver_id is not None:
             continue
 
-        route, route_cost = held_karp_pc(
-            driver.current_edge.edge.ending_node_index,
-            driver.end_node,
-            [
-                (
-                    (rid.start_node, rid.end_node)
-                    if rid.boarded_time is None
-                    else (rid.end_node, driver.end_node)
-                )
-                for rid in (driver.riders)
-            ]
-            + [(rider.start_node, rider.end_node)],
-            state,
-        )
-        driver_cost, rider_cost = driver.cost_fn_new_rider(route_cost, rider)
-        if rider_cost + driver_cost - driver.distance_paid_for > best_heuristic:
+        best_heuristic = rider.distance_paid_for
+        best_driver: Optional[Driver] = None
+        best_costs: Optional[tuple[float, float]] = None
+        best_route: Optional[list[int]] = None
+        for driver in drivers:
+            if driver.vacancies == 0 or driver.current_edge is None:
+                continue
+
+            route, route_cost = held_karp_pc(
+                driver.current_edge.edge.ending_node_index,
+                driver.end_node,
+                [
+                    (
+                        (rid.start_node, rid.end_node)
+                        if rid.boarded_time is None
+                        else (rid.end_node, driver.end_node)
+                    )
+                    for rid in (driver.riders)
+                ]
+                + [(rider.start_node, rider.end_node)],
+                state,
+            )
+            driver_cost, rider_cost = driver.cost_fn_new_rider(route_cost, rider)
+            if rider_cost + driver_cost - driver.distance_paid_for > best_heuristic:
+                continue
+
+            best_driver, best_route = driver, route
+            best_heuristic = rider_cost + driver_cost - driver.distance_paid_for
+            best_costs = (driver_cost, rider_cost)
+
+        if best_driver is None:
             continue
 
-        best_driver, best_route = driver, route
-        best_heuristic = rider_cost + driver_cost - driver.distance_paid_for
-        best_costs = (driver_cost, rider_cost)
-
-    if best_driver is None:
-        return
-
-    best_driver.match_rider(rider, best_route, best_costs, current_time)
+        best_driver.match_rider(rider, best_route, best_costs, current_time)

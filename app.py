@@ -7,8 +7,8 @@ import pygame
 
 from constants import Colors, Events
 from entity import Driver, Rider
+from pso import RideSharingPSOInstance
 from simulation_gen import SimulationGenerator
-from matching import static_rider_matching
 from state import SimulationState
 from stats import calculate_statistics
 
@@ -39,6 +39,7 @@ waiting_riders: set[Rider] = set()
 driver_archive: set[Driver] = set()
 rider_archive: set[Rider] = set()
 sg.start()  # starts recurring new driver and new rider events generation
+pso_matcher = RideSharingPSOInstance(state)
 
 while running:
     current_time = state.get_time()
@@ -84,8 +85,9 @@ while running:
     for rider in idle_riders:
         if rider.cancel_time <= current_time and rider.matched_time is None:
             rider.cancel(current_time)
-        else:
-            static_rider_matching(rider, drivers, state, current_time)
+
+    pso_matcher.match_riders(drivers, idle_riders)
+
     for driver in drivers:
         driver.move(current_time)
 
