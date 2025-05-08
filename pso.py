@@ -27,7 +27,7 @@ class RideSharingPSOInstance:
         )
         k = len(riders)
         if k == 0:
-            return orig_dist, [], 0.0
+            return 0, [], 0.0
         if k > driver.vacancies:
             return 0.0, [], 0.0
         orig_dist = orig_dist + sum(rider.distance_paid_for for rider in riders)
@@ -56,6 +56,8 @@ class RideSharingPSOInstance:
         riders: list[Rider],
         num_particles: int = 30,
         iterations: int = 50,
+        min_improv_particles: int = 5,
+        max_no_improv_iter: int = 5,
     ) -> tuple[list[Rider], float, list[int], float]:
         num_riders = len(riders)
         if num_riders == 0:
@@ -66,8 +68,9 @@ class RideSharingPSOInstance:
         pbest: list[list[float]] = []
         pbest_vals: list[tuple[float, list[int], float]] = []
         for _ in range(num_particles):
-            pos = [random.uniform(-1, 1) for _ in range(num_riders)]
-            vel = [random.uniform(-1, 1) for _ in range(num_riders)]
+            # Using max driver.vacancies positive numbers to satisfy constraints
+            pos = self._pseudo_randomize_vector(num_riders, driver.vacancies)
+            vel = self._pseudo_randomize_vector(num_riders, driver.vacancies)
             swarm.append(pos)
             velocities.append(vel)
             sel = self._decode_particle(pos)
@@ -80,7 +83,10 @@ class RideSharingPSOInstance:
         gbest_pos = pbest[gb_index].copy()
         gbest_val = pbest_vals[gb_index]
 
+        no_improv_iter = 0
         for _ in range(iterations):
+            no_improv_iter += 1
+            improv_particles = 0
             for i in range(num_particles):
                 pos = swarm[i]
                 vel = velocities[i]
@@ -98,13 +104,35 @@ class RideSharingPSOInstance:
                 if res[0] > pbest_vals[i][0]:
                     pbest_vals[i] = res
                     pbest[i] = pos.copy()
+                    improv_particles += 1
                 if res[0] > gbest_val[0]:
                     gbest_val = res
                     gbest_pos = pos.copy()
+                    no_improv_iter = 0
+
+            if (
+                no_improv_iter >= max_no_improv_iter
+                or improv_particles < min_improv_particles
+            ):
+                # Shortcircuit if no improvement was made in a while
+                break
 
         best_indices = self._decode_particle(gbest_pos)
         rids = [riders[i] for i in best_indices]
         return rids, *gbest_val
+
+    def _pseudo_randomize_vector(self, len: int, max_positive: int) -> list[float]:
+        if max_positive >= len:
+            return [random.uniform(-1, 1) for _ in range(len)]
+
+        result = [random.uniform(-1, 0) for _ in range(len)]
+        num_positive = random.randint(0, max_positive)
+        positive_indices = random.sample(range(len), num_positive)
+
+        for index in positive_indices:
+            result[index] = random.uniform(0, 1)
+
+        return result
 
     def match_riders(
         self, drivers: set[Driver], riders: set[Rider]
@@ -128,7 +156,7 @@ class RideSharingPSOInstance:
             for rider in riders:
                 if (
                     rider.id not in unmatched
-                    or rider.matched_time is not None
+                    or rider.driver_id is not None
                     or rider.cancelled_time is not None
                 ):
                     continue

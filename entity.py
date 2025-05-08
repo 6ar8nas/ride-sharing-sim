@@ -65,6 +65,9 @@ class Rider(Entity):
         self.cancelled_time = time
         self.state.post_event(Events.RiderCancel, rider=self)
 
+    def copy(self) -> "Rider":
+        return Rider(self.start_node, self.end_node, self.state)
+
 
 class Driver(Entity):
     speed_kmh = 50
@@ -194,6 +197,14 @@ class Driver(Entity):
         cost_curr = self.distance_paid_for + new_rider.distance_paid_for
         offset = (cost - cost_curr) / 2
         return self.distance_paid_for + offset, new_rider.distance_paid_for + offset
+
+    def copy(self) -> "Driver":
+        return Driver(
+            self.start_node,
+            self.end_node,
+            self.state,
+            self.passenger_seats,
+        )
 
 
 class ActiveEdge:

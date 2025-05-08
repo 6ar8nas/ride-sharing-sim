@@ -15,7 +15,7 @@ def static_rider_matching(
     matches = 0
     expected_savings = 0.0
     for rider in riders:
-        if rider.driver_id is not None:
+        if rider.driver_id is not None or rider.cancelled_time is not None:
             continue
 
         best_heuristic = 0

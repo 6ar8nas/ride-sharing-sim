@@ -29,13 +29,13 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
         matches_static, matches_pso = 0.0, 0.0
         savings_static, savings_pso = 0.0, 0.0
         for i in range(iterations):
-            riders_copy = riders.copy()
-            drivers_copy = drivers.copy()
+            riders_copy = {rider.copy() for rider in riders}
+            drivers_copy = {driver.copy() for driver in drivers}
             t0 = time.time()
             m0, s0 = static_rider_matching(riders_copy, drivers_copy, state, curr_time)
             t1 = time.time()
-            riders_copy = riders.copy()
-            drivers_copy = drivers.copy()
+            riders_copy = {rider.copy() for rider in riders}
+            drivers_copy = {driver.copy() for driver in drivers}
             t2 = time.time()
             m1, s1 = matcher.match_riders(drivers_copy, riders_copy)
             t3 = time.time()
