@@ -189,13 +189,18 @@ class RideSharingPSOInstance:
                     and rid.id in unmatched
                     and rid.cancelled_time is None
                 ):
-                    unmatched.pop(rid.id, None)
                     unmatched_riders.append(rid)
                     riders_dist += rid.distance_paid_for
                     riders_count += 1
 
-            savings = riders_dist + dr.distance_paid_for - route_cost
-            half_savings = savings * 0.5
+            actual_savings = riders_dist + dr.distance_paid_for - route_cost
+            if actual_savings < 0:
+                continue
+
+            for rid in unmatched_riders:
+                unmatched.pop(rid.id, None)
+
+            half_savings = actual_savings * 0.5
             driver_cost = dr.distance_paid_for - half_savings
             for idx, rid in enumerate(unmatched_riders):
                 rider_cost = (rid.distance_paid_for / riders_dist) * half_savings
@@ -206,7 +211,7 @@ class RideSharingPSOInstance:
                     time,
                     idx == riders_count - 1,
                 )
-            expected_savings += savings
+            expected_savings += actual_savings
             matches += len(unmatched_riders)
 
         return matches, expected_savings
