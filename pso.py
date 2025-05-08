@@ -1,4 +1,5 @@
 import random
+from typing import Mapping, Optional
 from entity import Driver, Rider
 from routing import held_karp_pc
 from state import SimulationState
@@ -49,6 +50,114 @@ class RideSharingPSOInstance:
         if route_cost > orig_dist:
             return 0.0, [], 0.0
         return orig_dist - route_cost, route, route_cost
+
+    def _pseudo_randomize_vector(self, len: int, max_positive: int) -> list[float]:
+        if max_positive >= len:
+            return [random.uniform(-1, 1) for _ in range(len)]
+
+        result = [random.uniform(-1, 0) for _ in range(len)]
+        num_positive = random.randint(0, max_positive)
+        positive_indices = random.sample(range(len), num_positive)
+
+        for index in positive_indices:
+            result[index] = random.uniform(0, 1)
+
+        return result
+
+    def match_riders(
+        self, drivers: set[Driver], riders: set[Rider]
+    ) -> tuple[int, float]:
+        matches = 0
+        expected_savings = 0.0
+        unmatched = {r.id: r for r in riders}
+        candidates: list[tuple[Driver, list[Rider], float, list[int], float]] = []
+        for driver in drivers:
+            candidate = self._get_driver_candidate(driver, riders, unmatched)
+            if candidate is not None:
+                candidates.append(candidate)
+
+        candidates.sort(key=lambda x: x[2], reverse=True)
+        time = self.state.get_time()
+        for dr, rids, _, route, route_cost in candidates:
+            unmatched_riders: list[Rider] = []
+            riders_dist = dr.distance_paid_for
+            riders_count = 0
+            for idx, rid in enumerate(rids):
+                if (
+                    idx < dr.vacancies
+                    and rid.id in unmatched
+                    and rid.cancelled_time is None
+                ):
+                    unmatched_riders.append(rid)
+                    riders_dist += rid.distance_paid_for
+                    riders_count += 1
+
+            actual_savings = riders_dist + dr.distance_paid_for - route_cost
+            if actual_savings < 0:
+                continue
+
+            for rid in unmatched_riders:
+                unmatched.pop(rid.id, None)
+
+            half_savings = actual_savings * 0.5
+            driver_cost = dr.distance_paid_for - half_savings
+            for idx, rid in enumerate(unmatched_riders):
+                rider_cost = (rid.distance_paid_for / riders_dist) * half_savings
+                dr.match_rider(
+                    rid,
+                    route,
+                    (driver_cost, rider_cost),
+                    time,
+                    idx == riders_count - 1,
+                )
+            expected_savings += actual_savings
+            matches += len(unmatched_riders)
+
+        return matches, expected_savings
+
+    def _get_driver_candidate(
+        self,
+        driver: Driver,
+        riders: set[Rider],
+        unmatched: Mapping[int, Rider],
+    ) -> Optional[tuple[Driver, list[Rider], float, list[int], float]]:
+        if (
+            driver.vacancies <= 0
+            or driver.current_edge.edge.ending_node_index == driver.end_node
+        ):
+            None
+
+        orig_dist = self.state.shortest_path_distance(
+            driver.current_edge.edge.ending_node_index, driver.end_node
+        )
+
+        compat: list[Rider] = []
+        for rider in riders:
+            if (
+                rider.id not in unmatched
+                or rider.driver_id is not None
+                or rider.cancelled_time is not None
+            ):
+                continue
+
+            pickup_route = self.state.shortest_path_distance(
+                driver.current_edge.edge.ending_node_index, rider.start_node
+            ) + self.state.shortest_path_distance(rider.end_node, driver.end_node)
+
+            # Greedy heuristic to ignore riders that are too far
+            if orig_dist < pickup_route:
+                continue
+
+            compat.append(rider)
+
+        if len(compat) == 0:
+            return None
+
+        selected, savings, route, route_cost = self._driver_pso(driver, compat)
+        if len(selected) == 0:
+            return None
+
+        return (driver, selected, savings, route, route_cost)
 
     def _driver_pso(
         self,
@@ -120,98 +229,3 @@ class RideSharingPSOInstance:
         best_indices = self._decode_particle(gbest_pos)
         rids = [riders[i] for i in best_indices]
         return rids, *gbest_val
-
-    def _pseudo_randomize_vector(self, len: int, max_positive: int) -> list[float]:
-        if max_positive >= len:
-            return [random.uniform(-1, 1) for _ in range(len)]
-
-        result = [random.uniform(-1, 0) for _ in range(len)]
-        num_positive = random.randint(0, max_positive)
-        positive_indices = random.sample(range(len), num_positive)
-
-        for index in positive_indices:
-            result[index] = random.uniform(0, 1)
-
-        return result
-
-    def match_riders(
-        self, drivers: set[Driver], riders: set[Rider]
-    ) -> tuple[int, float]:
-        matches = 0
-        expected_savings = 0.0
-        unmatched = {r.id: r for r in riders}
-        candidates: list[tuple[Driver, list[Rider], float, list[int], float]] = []
-        for driver in drivers:
-            if (
-                driver.vacancies <= 0
-                or driver.current_edge.edge.ending_node_index == driver.end_node
-            ):
-                continue
-
-            orig_dist = self.state.shortest_path_distance(
-                driver.current_edge.edge.ending_node_index, driver.end_node
-            )
-
-            compat: list[Rider] = []
-            for rider in riders:
-                if (
-                    rider.id not in unmatched
-                    or rider.driver_id is not None
-                    or rider.cancelled_time is not None
-                ):
-                    continue
-
-                pickup_route = self.state.shortest_path_distance(
-                    driver.current_edge.edge.ending_node_index, rider.start_node
-                ) + self.state.shortest_path_distance(rider.end_node, driver.end_node)
-
-                # Greedy heuristic to ignore riders that are too far
-                if orig_dist < pickup_route:
-                    continue
-
-                compat.append(rider)
-            if len(compat) == 0:
-                continue
-
-            selected, savings, route, route_cost = self._driver_pso(driver, compat)
-            if len(selected) != 0:
-                candidates.append((driver, selected, savings, route, route_cost))
-
-        candidates.sort(key=lambda x: x[2], reverse=True)
-        time = self.state.get_time()
-        for dr, rids, savings, route, route_cost in candidates:
-            unmatched_riders: list[Rider] = []
-            riders_dist = dr.distance_paid_for
-            riders_count = 0
-            for idx, rid in enumerate(rids):
-                if (
-                    idx < dr.vacancies
-                    and rid.id in unmatched
-                    and rid.cancelled_time is None
-                ):
-                    unmatched_riders.append(rid)
-                    riders_dist += rid.distance_paid_for
-                    riders_count += 1
-
-            actual_savings = riders_dist + dr.distance_paid_for - route_cost
-            if actual_savings < 0:
-                continue
-
-            for rid in unmatched_riders:
-                unmatched.pop(rid.id, None)
-
-            half_savings = actual_savings * 0.5
-            driver_cost = dr.distance_paid_for - half_savings
-            for idx, rid in enumerate(unmatched_riders):
-                rider_cost = (rid.distance_paid_for / riders_dist) * half_savings
-                dr.match_rider(
-                    rid,
-                    route,
-                    (driver_cost, rider_cost),
-                    time,
-                    idx == riders_count - 1,
-                )
-            expected_savings += actual_savings
-            matches += len(unmatched_riders)
-
-        return matches, expected_savings
