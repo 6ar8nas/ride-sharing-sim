@@ -181,6 +181,7 @@ class RideSharingPSOInstance:
         time = self.state.get_time()
         for dr, rids, savings, route, route_cost in candidates:
             unmatched_riders: list[Rider] = []
+            riders_dist = dr.distance_paid_for
             riders_count = 0
             for idx, rid in enumerate(rids):
                 if (
@@ -190,12 +191,14 @@ class RideSharingPSOInstance:
                 ):
                     unmatched.pop(rid.id, None)
                     unmatched_riders.append(rid)
+                    riders_dist += rid.distance_paid_for
                     riders_count += 1
 
-            savings_pp = savings / (riders_count + 1)
-            driver_cost = dr.distance_paid_for - savings_pp
+            savings = riders_dist + dr.distance_paid_for - route_cost
+            half_savings = savings * 0.5
+            driver_cost = dr.distance_paid_for - half_savings
             for idx, rid in enumerate(unmatched_riders):
-                rider_cost = rid.distance_paid_for - savings_pp
+                rider_cost = (rid.distance_paid_for / riders_dist) * half_savings
                 dr.match_rider(
                     rid,
                     route,
@@ -203,7 +206,7 @@ class RideSharingPSOInstance:
                     time,
                     idx == riders_count - 1,
                 )
-            expected_savings += savings_pp * len(unmatched_riders)
+            expected_savings += savings
             matches += len(unmatched_riders)
 
         return matches, expected_savings
