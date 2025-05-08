@@ -3,6 +3,7 @@ from typing import Mapping, Optional
 from entity import Driver, Rider
 from routing import held_karp_pc
 from state import SimulationState
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class RideSharingPSOInstance:
@@ -71,10 +72,17 @@ class RideSharingPSOInstance:
         expected_savings = 0.0
         unmatched = {r.id: r for r in riders}
         candidates: list[tuple[Driver, list[Rider], float, list[int], float]] = []
-        for driver in drivers:
-            candidate = self._get_driver_candidate(driver, riders, unmatched)
-            if candidate is not None:
-                candidates.append(candidate)
+        # ThreadPoolExecutor actually doesn't do anything with CPU-bound operations
+        # Just imitating parallelization with this here
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self._get_driver_candidate, dr, riders, unmatched)
+                for dr in drivers
+            ]
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    candidates.append(result)
 
         candidates.sort(key=lambda x: x[2], reverse=True)
         time = self.state.get_time()

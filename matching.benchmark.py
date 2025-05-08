@@ -10,20 +10,20 @@ state = SimulationState("Vilnius, Lithuania", benchmarking=True)
 sim_gen = SimulationGenerator(state)
 matcher = RideSharingPSOInstance(state)
 
-iterations = 10
-max_drivers_count = 10
-max_riders_count = 10
+iterations = 1
+max_drivers_count = 100
+max_riders_count = 100
 
 drivers: set[Driver] = set()
 curr_time = state.get_time()
-drivers_step = max_drivers_count // 10
+drivers_step = max_drivers_count
 for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
-    for _ in range(drivers_count - len(drivers)):  # Add the *remaining* drivers
+    for _ in range(drivers_count - len(drivers)):
         drivers.add(sim_gen.new_driver(curr_time))
     riders: set[Rider] = set()
-    riders_step = max_riders_count // 10
+    riders_step = max_riders_count
     for riders_count in range(riders_step, max_riders_count + 1, riders_step):
-        for _ in range(riders_count - len(riders)):  # Add the *remaining* riders
+        for _ in range(riders_count - len(riders)):
             riders.add(sim_gen.new_rider(curr_time))
         time_static, time_pso = 0.0, 0.0
         matches_static, matches_pso = 0.0, 0.0
