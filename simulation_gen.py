@@ -16,7 +16,7 @@ class SimulationGenerator:
     rush_hour_commute_bias = 0.7
     traffic_update_frequency = 15
 
-    def __init__(self, state: SimulationState):
+    def __init__(self, state: SimulationState, is_benchmarking: bool = False):
         self.state = state
         self.node_ids = list(state.graph.node_indices())
         self.residential_node_ids = list(
@@ -24,6 +24,7 @@ class SimulationGenerator:
         )
         self.central_node_ids = list(state.graph.filter_nodes(lambda e: e.is_center))
         self.generate_events = False
+        self.event_fn = None if is_benchmarking else state.post_event
 
     def start(self):
         if self.generate_events:
@@ -38,7 +39,7 @@ class SimulationGenerator:
                 )
                 time.sleep(sleep_timer)
                 driver = self.new_driver(self.state.get_time())
-                self.state.post_event(Events.NewDriver, driver=driver)
+                self.event_fn(Events.NewDriver, {"driver": driver})
 
         def generate_rider():
             while self.generate_events:
@@ -47,13 +48,13 @@ class SimulationGenerator:
                 )
                 time.sleep(sleep_timer)
                 rider = self.new_rider(self.state.get_time())
-                self.state.post_event(Events.NewRider, rider=rider)
+                self.event_fn(Events.NewRider, {"rider": rider})
 
         def reevaluate_traffic():
             sleep_timer = self.traffic_update_frequency / self.state.simulation_speed
             while self.generate_events:
                 time.sleep(sleep_timer)
-                self.state.post_event(Events.TrafficUpdate)
+                self.event_fn(Events.TrafficUpdate, {})
 
         self.thread_driver = threading.Thread(target=generate_driver, daemon=True)
         self.thread_driver.start()
@@ -74,11 +75,18 @@ class SimulationGenerator:
     def new_driver(self, current_time: DateTime) -> Driver:
         start_node, end_node = self.__generate_nodes(current_time)
         [passenger_count] = random.choices([1, 2, 3, 4], [0.15, 0.2, 0.05, 0.6])
-        return Driver(start_node, end_node, self.state, passenger_count)
+        return Driver(
+            start_node,
+            end_node,
+            current_time,
+            self.state,
+            passenger_count,
+            self.event_fn,
+        )
 
     def new_rider(self, current_time: DateTime) -> Rider:
         start_node, end_node = self.__generate_nodes(current_time)
-        return Rider(start_node, end_node, self.state)
+        return Rider(start_node, end_node, current_time, self.state, self.event_fn)
 
     def __generate_nodes(self, current_time: DateTime) -> tuple[int, int]:
         start_node, end_node = 0, 0

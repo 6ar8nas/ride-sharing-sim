@@ -1,16 +1,20 @@
 from typing import Optional
 
 from entity import Driver, Rider
+from osm_graph import OSMGraph
 from routing import held_karp_pc
-from state import SimulationState
 
 
 def static_rider_matching(
     riders: set[Rider],
     drivers: set[Driver],
-    state: SimulationState,
-) -> tuple[int, float]:
-    matches = 0
+    state: OSMGraph,
+) -> tuple[
+    list[tuple[tuple[Driver, float], list[tuple[Rider, float]], list[int]]], int, float
+]:
+    matches: list[tuple[tuple[Driver, float], list[tuple[Rider, float]], list[int]]] = (
+        []
+    )
     expected_savings = 0.0
     for rider in riders:
         if rider.driver_id is not None or rider.cancelled_time is not None:
@@ -45,13 +49,14 @@ def static_rider_matching(
 
             best_driver, best_route = driver, route
             best_heuristic = heuristic
-            best_costs = driver.cost_fn_new_rider(route_cost, rider)
+            driver_costs, rider_costs = driver.cost_fn_new_rider(route_cost, rider)
 
         if best_driver is None:
             continue
 
-        best_driver.match_rider(rider, best_route, best_costs, state.get_time())
-        matches += 1
+        matches.append(
+            ((best_driver, driver_costs), [(rider, rider_costs)], best_route)
+        )
         expected_savings += best_heuristic
 
-    return matches, expected_savings
+    return matches, len(matches), expected_savings

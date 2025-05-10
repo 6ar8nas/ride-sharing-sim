@@ -86,10 +86,12 @@ while running:
         if rider.cancel_time <= current_time and rider.matched_time is None:
             rider.cancel(current_time)
 
-    pso_matcher.match_riders(idle_riders, drivers)
+    matches, _, _ = pso_matcher.match_riders(idle_riders, drivers)
+    for driver, cost, riders, route in matches:
+        driver.match_riders(cost, riders, route, state.get_time())
 
     for driver in drivers:
-        driver.move(current_time)
+        driver.move(state.speed_ratio, current_time)
 
     # Drawing
     if background is None:

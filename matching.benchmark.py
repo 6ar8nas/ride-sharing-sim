@@ -1,13 +1,13 @@
 import time
-
 from entity import Driver, Rider
+from osm_graph import OSMGraph
 from pso import RideSharingPSOInstance
 from matching import static_rider_matching
 from simulation_gen import SimulationGenerator
-from state import SimulationState
+from utils import DateTime
 
-state = SimulationState("Vilnius, Lithuania", benchmarking=True)
-sim_gen = SimulationGenerator(state)
+state = OSMGraph("Vilnius, Lithuania")
+sim_gen = SimulationGenerator(state, is_benchmarking=True)
 
 param_sets = [
     ("Static", {}),
@@ -19,17 +19,12 @@ param_sets = [
     ("PSO", {"w": (0.9, 0.4), "c1": (2.5, 0.5), "c2": (0.5, 2.5)}),
 ]
 
-matching_algorithms = {
-    "PSO": RideSharingPSOInstance,
-    "Static": static_rider_matching,
-}
-
 iterations = 3
 max_drivers_count = 50
 max_riders_count = 100
 
 drivers: set[Driver] = set()
-curr_time = state.get_time()
+curr_time = DateTime()
 drivers_step = max_drivers_count // 5
 drivers_step = max_drivers_count // 5
 
@@ -54,11 +49,13 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
 
                 t0 = time.time()
                 if model == "PSO":
-                    matcher = matching_algorithms[model](state, **params)
-                    matches, savings = matcher.match_riders(riders_copy, drivers_copy)
+                    matcher = RideSharingPSOInstance(state, **params)
+                    _, matches, savings = matcher.match_riders(
+                        riders_copy, drivers_copy
+                    )
                     iters = matcher.iters
                 elif model == "Static":
-                    matches, savings = matching_algorithms[model](
+                    _, matches, savings = static_rider_matching(
                         riders_copy, drivers_copy, state
                     )
                     iters = 0.0

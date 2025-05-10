@@ -1,10 +1,8 @@
-from typing import Optional
-
+from typing import Any, Callable, Optional
 from constants import Events
-from osm_graph import CityEdge
+from osm_graph import CityEdge, OSMGraph
 from routing import held_karp_pc
 from utils import DateTime
-from state import SimulationState
 
 
 class Entity:
@@ -14,17 +12,24 @@ class Entity:
         self,
         start_node: int,
         end_node: int,
-        state: SimulationState,
+        time: DateTime,
+        state: OSMGraph,
+        event_fn: Optional[Callable[[Events, dict[str, Any]], None]] = None,
     ):
         self.id = Entity._uid
         self.start_node, self.end_node = start_node, end_node
         Entity._uid += 1
         self.state = state
-        self.departure_time = self.state.get_time()
+        self.departure_time = time
         self.completed_time: Optional[DateTime] = None
         self.shortest_distance = self.state.shortest_distance(start_node, end_node)
         self.distance_paid_for = self.state.shortest_path_distance(start_node, end_node)
         self.single_trip_distance = self.distance_paid_for
+        self._event_fn = event_fn
+
+    def _post_event(self, event_type: Events, dict: dict[str, Any] = {}):
+        if self._event_fn:
+            self._event_fn(event_type, dict)
 
     def complete(self, time: DateTime):
         self.completed_time = time
@@ -43,9 +48,11 @@ class Rider(Entity):
         self,
         start_node: int,
         end_node: int,
-        state: SimulationState,
+        time: DateTime,
+        state: OSMGraph,
+        event_fn: Optional[Callable[[Events, dict[str, Any]], None]] = None,
     ):
-        super().__init__(start_node, end_node, state)
+        super().__init__(start_node, end_node, time, state, event_fn)
         self.position = self.state.graph.get_node_data(start_node)
         self.driver_id: Optional[int] = None
         self.matched_time: Optional[DateTime] = None
@@ -63,10 +70,16 @@ class Rider(Entity):
 
     def cancel(self, time: DateTime):
         self.cancelled_time = time
-        self.state.post_event(Events.RiderCancel, rider=self)
+        self._post_event(Events.RiderCancel, {"rider": self})
 
     def copy(self) -> "Rider":
-        return Rider(self.start_node, self.end_node, self.state)
+        return Rider(
+            self.start_node,
+            self.end_node,
+            self.departure_time,
+            self.state,
+            self._event_fn,
+        )
 
 
 class Driver(Entity):
@@ -76,21 +89,23 @@ class Driver(Entity):
         self,
         start_node: int,
         end_node: int,
-        state: SimulationState,
+        time: DateTime,
+        state: OSMGraph,
         passenger_seats: int = 4,
+        event_fn: Optional[Callable[[Events, dict[str, Any]], None]] = None,
     ):
-        super().__init__(start_node, end_node, state)
+        super().__init__(start_node, end_node, time, state, event_fn)
         self.passenger_seats, self.vacancies = passenger_seats, passenger_seats
         self.riders, self.completed_riders = set[Rider](), set[Rider]()
         self.route = self.__compute_route([start_node, end_node])
         self.current_edge = ActiveEdge(self.route.pop(0))
         self.total_distance = 0.0
 
-    def move(self, time: DateTime):
+    def move(self, speed_ratio: float, time: DateTime):
         if self.current_edge is None:
             return
 
-        distance, reached_dest = self.current_edge.move(self.state.speed_ratio)
+        distance, reached_dest = self.current_edge.move(speed_ratio)
         self.total_distance += distance
 
         if reached_dest:
@@ -109,39 +124,35 @@ class Driver(Entity):
         if len(self.route) == 0 and self.end_node == node_idx:
             self.complete(time)
 
-    def match_rider(
+    def match_riders(
         self,
-        rider: Rider,
+        cost: float,
+        riders: list[tuple[Rider, float]],
         node_route: list[int],
-        costs: tuple[float, float],
         time: DateTime,
-        compute_routes: bool = True,
     ):
-        if self.vacancies == 0:
-            return
-
-        self.distance_paid_for, rider_cost = costs
-        self.vacancies -= 1
-        rider.match_driver(self.id, rider_cost, time)
-        self.riders.add(rider)
-        self.state.post_event(Events.RiderMatch, driver=self, rider=rider)
-        if compute_routes:
-            self.route = self.__compute_route(node_route)
+        self.distance_paid_for = cost
+        self.route = self.__compute_route(node_route)
+        for rider, rider_cost in riders:
+            self.vacancies -= 1
+            rider.match_driver(self.id, rider_cost, time)
+            self.riders.add(rider)
+            self._post_event(Events.RiderMatch, {"driver": self, "rider": rider})
 
     def pick_up(self, rider: Rider, time: DateTime):
         rider.board(time)
-        self.state.post_event(Events.RiderPickup, driver=self, rider=rider)
+        self._post_event(Events.RiderPickup, {"driver": self, "rider": rider})
 
     def drop_off(self, rider: Rider, time: DateTime):
         rider.complete(time)
         self.vacancies += 1
         self.riders.discard(rider)
         self.completed_riders.add(rider)
-        self.state.post_event(Events.RiderDropOff, driver=self, rider=rider)
+        self._post_event(Events.RiderDropOff, {"driver": self, "rider": rider})
 
     def complete(self, time: DateTime):
         super().complete(time)
-        self.state.post_event(Events.DriverComplete, driver=self)
+        self._post_event(Events.DriverComplete, {"driver": self})
 
     def __compute_route(self, node_route: list[int]) -> list[CityEdge]:
         full_route = [node_route[0]]
@@ -202,8 +213,10 @@ class Driver(Entity):
         return Driver(
             self.start_node,
             self.end_node,
+            self.departure_time,
             self.state,
             self.passenger_seats,
+            self._event_fn,
         )
 
 

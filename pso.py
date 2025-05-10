@@ -2,14 +2,14 @@ import random
 from typing import Mapping, Optional
 from entity import Driver, Rider
 from routing import held_karp_pc
-from state import SimulationState
+from state import OSMGraph
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class RideSharingPSOInstance:
     def __init__(
         self,
-        state: SimulationState,
+        state: OSMGraph,
         w: tuple[float, float] = (0.7298, 0.7298),
         c1: tuple[float, float] = (1.49618, 1.49618),
         c2: tuple[float, float] = (1.49618, 1.49618),
@@ -68,10 +68,15 @@ class RideSharingPSOInstance:
 
         return result
 
-    def match_riders(
-        self, riders: set[Rider], drivers: set[Driver]
-    ) -> tuple[int, float]:
-        matches = 0
+    def match_riders(self, riders: set[Rider], drivers: set[Driver]) -> tuple[
+        list[tuple[tuple[Driver, float], list[tuple[Rider, float]], list[int]]],
+        int,
+        float,
+    ]:
+        matches: list[
+            tuple[tuple[Driver, float], list[tuple[Rider, float]], list[int]]
+        ] = []
+        matches_count = 0
         expected_savings = 0.0
         unmatched = {r.id: r for r in riders}
         candidates: list[tuple[Driver, list[Rider], float, list[int], float]] = []
@@ -88,7 +93,6 @@ class RideSharingPSOInstance:
                     candidates.append(result)
 
         candidates.sort(key=lambda x: x[2], reverse=True)
-        time = self.state.get_time()
         for dr, rids, _, route, route_cost in candidates:
             unmatched_riders: list[Rider] = []
             riders_dist = dr.distance_paid_for
@@ -112,19 +116,20 @@ class RideSharingPSOInstance:
 
             half_savings = actual_savings * 0.5
             driver_cost = dr.distance_paid_for - half_savings
-            for idx, rid in enumerate(unmatched_riders):
-                rider_cost = (rid.distance_paid_for / riders_dist) * half_savings
-                dr.match_rider(
-                    rid,
+            matches.append(
+                (
+                    (dr, driver_cost),
+                    [
+                        (rid, (rid.distance_paid_for / riders_dist) * half_savings)
+                        for rid in unmatched_riders
+                    ],
                     route,
-                    (driver_cost, rider_cost),
-                    time,
-                    idx == riders_count - 1,
                 )
+            )
             expected_savings += actual_savings
-            matches += len(unmatched_riders)
+            matches_count += len(unmatched_riders)
 
-        return matches, expected_savings
+        return matches, matches_count, expected_savings
 
     def _get_driver_candidate(
         self,

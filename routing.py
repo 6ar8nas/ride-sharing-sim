@@ -1,15 +1,14 @@
 import heapq
 import itertools
 from typing import Callable, Optional, Literal
-
-from state import SimulationState
+from osm_graph import OSMGraph
 
 
 def held_karp_pc(
     start_node: int,
     end_node: int,
     constrained_node_pairs: list[tuple[int, int]],
-    state: SimulationState,
+    state: OSMGraph,
     threshold: float = float("inf"),
 ) -> tuple[list[int], float]:
     start_city, end_city = 0, 1
@@ -73,7 +72,7 @@ def dijkstra_routing(
     start_node: int,
     end_node: int,
     constrained_node_pairs: list[tuple[int, int]],
-    state: SimulationState,
+    state: OSMGraph,
 ) -> tuple[list[int], float]:
     routes: list[
         tuple[float, list[int], bool, frozenset[tuple[int, Optional[int]]]]
@@ -113,7 +112,7 @@ def single_link_heuristic(
     current_node: int,
     available_actions: frozenset[tuple[int, Optional[int]]],
     end_node: int,
-    state: SimulationState,
+    state: OSMGraph,
 ) -> float:
     lb = state.shortest_path_distance(current_node, end_node)
     remaining_nodes = {
@@ -140,7 +139,7 @@ def nearest_neighbor_heuristic(
     current_node: int,
     available_actions: frozenset[tuple[int, Optional[int]]],
     end_node: int,
-    state: SimulationState,
+    state: OSMGraph,
 ) -> float:
     lb = state.shortest_path_distance(current_node, end_node)
     remaining_nodes = {
@@ -163,7 +162,7 @@ def nearest_neighbor_heuristic(
 
 heuristic_functions: dict[
     Literal["single-link", "nearest-neighbor"],
-    Callable[[int, frozenset[tuple[int, Optional[int]]], int, SimulationState], float],
+    Callable[[int, frozenset[tuple[int, Optional[int]]], int, OSMGraph], float],
 ] = {
     "single-link": single_link_heuristic,
     "nearest-neighbor": nearest_neighbor_heuristic,
@@ -174,7 +173,7 @@ def branch_bound_pc(
     start_node: int,
     end_node: int,
     constrained_node_pairs: list[tuple[int, int]],
-    state: SimulationState,
+    state: OSMGraph,
     heuristic: Literal["single-link", "nearest-neighbor"] = "single-link",
 ) -> tuple[list[int], float]:
     routes: list[
@@ -218,7 +217,7 @@ def brute_force_routing(
     start_node: int,
     end_node: int,
     constrained_node_pairs: list[tuple[int, int]],
-    state: SimulationState,
+    state: OSMGraph,
 ) -> tuple[list[int], float]:
     def is_valid_route(route: list[tuple[int, int, int]]) -> bool:
         const_sat = set()

@@ -23,7 +23,7 @@ class OSMGraph:
     def __init__(
         self,
         location_name: str,
-        data_file_name: str,
+        data_file_name: str = "city_data.json",
         cache=True,
         screen_size: tuple[int, int] = (800, 600),
     ):

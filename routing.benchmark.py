@@ -1,10 +1,10 @@
 import random
 import time
 
+from osm_graph import OSMGraph
 from routing import branch_bound_pc, brute_force_routing, dijkstra_routing, held_karp_pc
-from state import SimulationState
 
-state = SimulationState("Vilnius, Lithuania", benchmarking=True)
+state = OSMGraph("Vilnius, Lithuania")
 
 iterations = 1000
 intermediary_nodes = 10
