@@ -10,7 +10,6 @@ def static_rider_matching(
     riders: set[Rider],
     drivers: set[Driver],
     state: SimulationState,
-    current_time: DateTime,
 ) -> tuple[int, float]:
     matches = 0
     expected_savings = 0.0
@@ -52,7 +51,7 @@ def static_rider_matching(
         if best_driver is None:
             continue
 
-        best_driver.match_rider(rider, best_route, best_costs, current_time)
+        best_driver.match_rider(rider, best_route, best_costs, state.get_time())
         matches += 1
         expected_savings += best_heuristic
 

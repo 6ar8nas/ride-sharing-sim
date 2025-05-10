@@ -69,7 +69,7 @@ class RideSharingPSOInstance:
         return result
 
     def match_riders(
-        self, drivers: set[Driver], riders: set[Rider]
+        self, riders: set[Rider], drivers: set[Driver]
     ) -> tuple[int, float]:
         matches = 0
         expected_savings = 0.0

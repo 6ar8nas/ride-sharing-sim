@@ -3,6 +3,7 @@ from itertools import product
 
 from entity import Driver, Rider
 from pso import RideSharingPSOInstance
+from matching import static_rider_matching
 from simulation_gen import SimulationGenerator
 from state import SimulationState
 
@@ -10,10 +11,16 @@ state = SimulationState("Vilnius, Lithuania", benchmarking=True)
 sim_gen = SimulationGenerator(state)
 
 param_sets = [
-    ((0.7289, 0.7289), (1.49618, 1.49618), (1.49618, 1.49618)),
-    ((0.9, 0.4), (2.0, 2.0), (2.0, 2.0)),
-    ((0.9, 0.4), (2.5, 0.5), (0.5, 2.5)),
+    ("Static", {}),
+    ("PSO", {"w": (0.7289, 0.7289), "c1": (1.49618, 1.49618), "c2": (1.49618, 1.49618)}),
+    ("PSO", {"w": (0.9, 0.4), "c1": (2.0, 2.0), "c2": (2.0, 2.0)}),
+    ("PSO", {"w": (0.9, 0.4), "c1": (2.5, 0.5), "c2": (0.5, 2.5)}),
 ]
+
+matching_algorithms = {
+    "PSO": RideSharingPSOInstance,
+    "Static": static_rider_matching,
+}
 
 iterations = 3
 max_drivers_count = 30
@@ -35,20 +42,26 @@ for drivers_count in range(drivers_step * 2, max_drivers_count + 1, drivers_step
             riders.add(sim_gen.new_rider(curr_time))
 
         print(f"\n--- Drivers: {drivers_count}, Riders: {riders_count} ---")
-        for w, c1, c2 in param_sets:
+        for model, params in param_sets:
             total_time, total_iters = 0.0, 0.0
             total_savings, total_matches = 0.0, 0.0
 
             for _ in range(iterations):
                 riders_copy = {r.copy() for r in riders}
                 drivers_copy = {d.copy() for d in drivers}
-                matcher = RideSharingPSOInstance(state, w=w, c1=c1, c2=c2)
+
                 t0 = time.time()
-                matches, savings = matcher.match_riders(drivers_copy, riders_copy)
+                if model == "PSO":
+                    matcher = matching_algorithms[model](state, **params)
+                    matches, savings = matcher.match_riders(riders_copy, drivers_copy)
+                    iters = matcher.iters
+                elif model == "Static":
+                    matches, savings = matching_algorithms[model](riders_copy, drivers_copy, state)
+                    iters = 0.0
                 t1 = time.time()
 
                 total_time += t1 - t0
-                total_iters += matcher.iters
+                total_iters += iters
                 total_savings += savings
                 total_matches += matches
 
@@ -57,7 +70,13 @@ for drivers_count in range(drivers_step * 2, max_drivers_count + 1, drivers_step
             avg_savings = total_savings / iterations
             avg_matches = total_matches / iterations
 
+            param_string = ""
+            if model == "PSO":
+                param_string = f"w=({params['w'][0]:.2f}-{params['w'][1]:.2f}), c1=({params['c1'][0]:.2f}-{params['c1'][1]:.2f}), c2=({params['c2'][0]:.2f}-{params['c2'][1]:.2f}) | "
+            elif model == "Static":
+                param_string = f"{'Static':45} | "
+
             print(
-                f"w=({w[0]:.2f}-{w[1]:.2f}), c1=({c1[0]:.2f}-{c1[1]:.2f}), c2=({c2[0]:.2f}-{c2[1]:.2f}) | "
-                f"time={avg_time:6.2f}s, iters={avg_iters:4.1f}, savings={avg_savings:8.2f}, matches={avg_matches:6.1f}"
+                f"{param_string}"
+                f"time={avg_time:6.2f}s, iters={avg_iters:4.1f}, savings={avg_savings:10.2f}, matches={avg_matches:6.1f}"
             )
