@@ -58,6 +58,6 @@ for drivers_count in range(drivers_step * 2, max_drivers_count + 1, drivers_step
             avg_matches = total_matches / iterations
 
             print(
-                f"w={w}, c1={c1}, c2={c2} | "
-                f"time={avg_time:6.2f}s, iters={avg_iters:5.1f}, savings={avg_savings:7.2f}, matches={avg_matches:5.1f}"
+                f"w=({w[0]:.2f}-{w[1]:.2f}), c1=({c1[0]:.2f}-{c1[1]:.2f}), c2=({c2[0]:.2f}-{c2[1]:.2f}) | "
+                f"time={avg_time:6.2f}s, iters={avg_iters:4.1f}, savings={avg_savings:8.2f}, matches={avg_matches:6.1f}"
             )
