@@ -24,15 +24,12 @@ class RideSharingPSOInstance:
     def _evaluate_solution(
         self, driver: Driver, riders: list[Rider]
     ) -> tuple[float, list[int], float]:
+        k = len(riders)
+        if k == 0 or k > driver.vacancies:
+            return 0, [], 0.0
         orig_dist = self.state.shortest_path_distance(
             driver.current_edge.edge.ending_node_index, driver.end_node
-        )
-        k = len(riders)
-        if k == 0:
-            return 0, [], 0.0
-        if k > driver.vacancies:
-            return 0.0, [], 0.0
-        orig_dist = orig_dist + sum(rider.distance_paid_for for rider in riders)
+        ) + sum(rider.distance_paid_for for rider in riders)
         route, route_cost = held_karp_pc(
             driver.current_edge.edge.ending_node_index,
             driver.end_node,
@@ -133,7 +130,7 @@ class RideSharingPSOInstance:
             driver.vacancies <= 0
             or driver.current_edge.edge.ending_node_index == driver.end_node
         ):
-            None
+            return None
 
         orig_dist = self.state.shortest_path_distance(
             driver.current_edge.edge.ending_node_index, driver.end_node
@@ -190,8 +187,8 @@ class RideSharingPSOInstance:
             vel = self._pseudo_randomize_vector(num_riders, driver.vacancies)
             swarm.append(pos)
             velocities.append(vel)
-            sel = self._decode_particle(pos)
-            rids = [riders[i] for i in sel]
+            selected = self._decode_particle(pos)
+            rids = [riders[i] for i in selected]
             res = self._evaluate_solution(driver, rids)
             pbest.append(pos.copy())
             pbest_vals.append(res)
@@ -222,10 +219,10 @@ class RideSharingPSOInstance:
                     pbest_vals[i] = res
                     pbest[i] = pos.copy()
                     improv_particles += 1
-                if res[0] > gbest_val[0]:
-                    gbest_val = res
-                    gbest_pos = pos.copy()
-                    no_improv_iter = 0
+                    if res[0] > gbest_val[0]:
+                        gbest_val = res
+                        gbest_pos = pos.copy()
+                        no_improv_iter = 0
 
             if (
                 no_improv_iter >= max_no_improv_iter
