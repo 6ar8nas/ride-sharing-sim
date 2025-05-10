@@ -7,12 +7,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class RideSharingPSOInstance:
-    w = 0.75
-    c1 = 1.5
-    c2 = 1.5
-
-    def __init__(self, state: SimulationState):
+    def __init__(
+        self,
+        state: SimulationState,
+        w: tuple[float, float] = (0.7298, 0.7298),
+        c1: tuple[float, float] = (1.49618, 1.49618),
+        c2: tuple[float, float] = (1.49618, 1.49618),
+    ):
         self.state = state
+        self.w_min, self.w_max = w
+        self.c1_min, self.c1_max = c1
+        self.c2_min, self.c2_max = c2
+        self.iters = 0
 
     def _decode_particle(
         self, position: list[float], threshold: float = 0.0
@@ -198,18 +204,22 @@ class RideSharingPSOInstance:
         gbest_val = pbest_vals[gb_index]
 
         no_improv_iter = 0
-        for _ in range(iterations):
+        for it in range(iterations):
             no_improv_iter += 1
             improv_particles = 0
+            progress = it / iterations
+            w = self.w_max - (self.w_max - self.w_min) * progress
+            c1 = self.c1_max - (self.c1_max - self.c1_min) * progress
+            c2 = self.c2_min + (self.c2_max - self.c2_min) * progress
             for i in range(num_particles):
                 pos = swarm[i]
                 vel = velocities[i]
                 for j in range(num_riders):
                     r1, r2 = random.random(), random.random()
                     vel[j] = (
-                        RideSharingPSOInstance.w * vel[j]
-                        + RideSharingPSOInstance.c1 * r1 * (pbest[i][j] - pos[j])
-                        + RideSharingPSOInstance.c2 * r2 * (gbest_pos[j] - pos[j])
+                        w * vel[j]
+                        + c1 * r1 * (pbest[i][j] - pos[j])
+                        + c2 * r2 * (gbest_pos[j] - pos[j])
                     )
                     pos[j] += vel[j]
                 sel = self._decode_particle(pos)
@@ -233,4 +243,5 @@ class RideSharingPSOInstance:
 
         best_indices = self._decode_particle(gbest_pos)
         rids = [riders[i] for i in best_indices]
+        self.iters += it
         return rids, *gbest_val
