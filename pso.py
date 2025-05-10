@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class RideSharingPSOInstance:
-    w = 0.729
+    w = 0.75
     c1 = 1.5
     c2 = 1.5
 
