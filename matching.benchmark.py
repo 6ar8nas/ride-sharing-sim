@@ -23,7 +23,7 @@ matching_algorithms = {
 }
 
 iterations = 3
-max_drivers_count = 30
+max_drivers_count = 50
 max_riders_count = 100
 
 drivers: set[Driver] = set()
@@ -31,13 +31,13 @@ curr_time = state.get_time()
 drivers_step = max_drivers_count // 5
 drivers_step = max_drivers_count // 5
 
-for drivers_count in range(drivers_step * 2, max_drivers_count + 1, drivers_step):
+for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
     for _ in range(drivers_count - len(drivers)):
         drivers.add(sim_gen.new_driver(curr_time))
 
     riders: set[Rider] = set()
     riders_step = max_riders_count // 5
-    for riders_count in range(riders_step * 2, max_riders_count + 1, riders_step):
+    for riders_count in range(riders_step, max_riders_count + 1, riders_step):
         for _ in range(riders_count - len(riders)):
             riders.add(sim_gen.new_rider(curr_time))
 

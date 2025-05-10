@@ -15,9 +15,9 @@ class RideSharingPSOInstance:
         c2: tuple[float, float] = (1.49618, 1.49618),
     ):
         self.state = state
-        self.w_min, self.w_max = w
-        self.c1_min, self.c1_max = c1
-        self.c2_min, self.c2_max = c2
+        self.w_start, self.w_step = w[0], w[1] - w[0]
+        self.c1_start, self.c1_step = c1[0], c1[1] - c1[0]
+        self.c2_start, self.c2_step = c2[0], c2[1] - c2[0]
         self.iters = 0
 
     def _decode_particle(
@@ -208,9 +208,9 @@ class RideSharingPSOInstance:
             no_improv_iter += 1
             improv_particles = 0
             progress = it / iterations
-            w = self.w_max - (self.w_max - self.w_min) * progress
-            c1 = self.c1_max - (self.c1_max - self.c1_min) * progress
-            c2 = self.c2_min + (self.c2_max - self.c2_min) * progress
+            w = self.w_start + self.w_step * progress
+            c1 = self.c1_start + self.c1_step * progress
+            c2 = self.c2_start + self.c2_step * progress
             for i in range(num_particles):
                 pos = swarm[i]
                 vel = velocities[i]
