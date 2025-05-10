@@ -2,7 +2,6 @@ from typing import Optional
 
 from entity import Driver, Rider
 from routing import held_karp_pc
-from utils import DateTime
 from state import SimulationState
 
 

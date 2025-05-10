@@ -1,5 +1,4 @@
 import time
-from itertools import product
 
 from entity import Driver, Rider
 from pso import RideSharingPSOInstance
@@ -12,7 +11,10 @@ sim_gen = SimulationGenerator(state)
 
 param_sets = [
     ("Static", {}),
-    ("PSO", {"w": (0.7289, 0.7289), "c1": (1.49618, 1.49618), "c2": (1.49618, 1.49618)}),
+    (
+        "PSO",
+        {"w": (0.7289, 0.7289), "c1": (1.49618, 1.49618), "c2": (1.49618, 1.49618)},
+    ),
     ("PSO", {"w": (0.9, 0.4), "c1": (2.0, 2.0), "c2": (2.0, 2.0)}),
     ("PSO", {"w": (0.9, 0.4), "c1": (2.5, 0.5), "c2": (0.5, 2.5)}),
 ]
@@ -56,7 +58,9 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
                     matches, savings = matcher.match_riders(riders_copy, drivers_copy)
                     iters = matcher.iters
                 elif model == "Static":
-                    matches, savings = matching_algorithms[model](riders_copy, drivers_copy, state)
+                    matches, savings = matching_algorithms[model](
+                        riders_copy, drivers_copy, state
+                    )
                     iters = 0.0
                 t1 = time.time()
 
