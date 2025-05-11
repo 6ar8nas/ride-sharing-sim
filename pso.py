@@ -5,6 +5,8 @@ from routing import held_karp_pc
 from state import OSMGraph
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from utils import DateTime
+
 
 class RideSharingPSOInstance:
     def __init__(
@@ -68,14 +70,12 @@ class RideSharingPSOInstance:
 
         return result
 
-    def match_riders(self, riders: set[Rider], drivers: set[Driver]) -> tuple[
-        list[tuple[tuple[Driver, float], list[tuple[Rider, float]], list[int]]],
+    def match_riders(
+        self, riders: set[Rider], drivers: set[Driver], time: DateTime
+    ) -> tuple[
         int,
         float,
     ]:
-        matches: list[
-            tuple[tuple[Driver, float], list[tuple[Rider, float]], list[int]]
-        ] = []
         matches_count = 0
         expected_savings = 0.0
         unmatched = {r.id: r for r in riders}
@@ -116,7 +116,7 @@ class RideSharingPSOInstance:
 
             half_savings = actual_savings * 0.5
             driver_cost = dr.distance_paid_for - half_savings
-            matches.append(
+            dr.match_riders(
                 (
                     (dr, driver_cost),
                     [
@@ -124,12 +124,13 @@ class RideSharingPSOInstance:
                         for rid in unmatched_riders
                     ],
                     route,
+                    time,
                 )
             )
             expected_savings += actual_savings
             matches_count += len(unmatched_riders)
 
-        return matches, matches_count, expected_savings
+        return matches_count, expected_savings
 
     def _get_driver_candidate(
         self,
@@ -186,7 +187,7 @@ class RideSharingPSOInstance:
     ) -> tuple[list[Rider], float, list[int], float]:
         num_riders = len(riders)
         if num_riders == 0:
-            return [], 0.0, [], float("inf")
+            return [], 0.0, [], 1e18
 
         swarm: list[list[float]] = []
         velocities: list[list[float]] = []

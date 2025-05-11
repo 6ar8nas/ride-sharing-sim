@@ -86,9 +86,7 @@ while running:
         if rider.cancel_time <= current_time and rider.matched_time is None:
             rider.cancel(current_time)
 
-    matches, _, _ = pso_matcher.match_riders(idle_riders, drivers)
-    for driver, cost, riders, route in matches:
-        driver.match_riders(cost, riders, route, state.get_time())
+    pso_matcher.match_riders(idle_riders, drivers, current_time)
 
     for driver in drivers:
         driver.move(state.speed_ratio, current_time)

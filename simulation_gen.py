@@ -16,7 +16,7 @@ class SimulationGenerator:
     rush_hour_commute_bias = 0.7
     traffic_update_frequency = 15
 
-    def __init__(self, state: SimulationState, is_benchmarking: bool = False):
+    def __init__(self, state: SimulationState):
         self.state = state
         self.node_ids = list(state.graph.node_indices())
         self.residential_node_ids = list(
@@ -24,7 +24,7 @@ class SimulationGenerator:
         )
         self.central_node_ids = list(state.graph.filter_nodes(lambda e: e.is_center))
         self.generate_events = False
-        self.event_fn = None if is_benchmarking else state.post_event
+        self.event_fn = state.post_event
 
     def start(self):
         if self.generate_events:
@@ -80,8 +80,8 @@ class SimulationGenerator:
             end_node,
             current_time,
             self.state,
-            passenger_count,
             self.event_fn,
+            passenger_count,
         )
 
     def new_rider(self, current_time: DateTime) -> Rider:

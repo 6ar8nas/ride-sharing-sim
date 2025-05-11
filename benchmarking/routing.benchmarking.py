@@ -1,32 +1,42 @@
-import random
 import time
+import numpy as np
 
 from osm_graph import OSMGraph
-from routing import branch_bound_pc, brute_force_routing, dijkstra_routing, held_karp_pc
+from routing import (
+    branch_bound_pc,
+    brute_force_routing,
+    dijkstra_routing,
+    held_karp_pc,
+)
 
 state = OSMGraph("Vilnius, Lithuania")
-
-iterations = 1000
+iterations = 100
 intermediary_nodes = 10
+shortest_distances = state.build_shortest_path_distances()
 
 for elem_count in range(0, intermediary_nodes + 1, 2):
     tt1, tt2, tt3, tt4, tt5 = 0, 0, 0, 0, 0
     tw1, tw2, tw3, tw4, tw5 = 0, 0, 0, 0, 0
+    node_indices = np.array(state.graph.node_indices(), dtype=int)
+    sn, en = np.random.choice(node_indices, size=2, replace=True)
+    choices = np.random.choice(node_indices, size=elem_count, replace=True)
+    lst = np.stack((choices[::2], choices[1::2]), axis=1, dtype=int)
+    # Eager compile of the njit function
+    held_karp_pc(sn, en, lst, shortest_distances)
     for i in range(iterations):
-        sn, en = random.choices(list(state.graph.node_indices()), k=2)
-        lst = random.choices(list(state.graph.node_indices()), k=elem_count)
-        lst = [(lst[i], lst[i + 1]) for i in range(0, elem_count, 2)]
 
         t0 = time.time()
-        _, weight1 = held_karp_pc(sn, en, lst, state)
+        _, weight1 = held_karp_pc(sn, en, lst, shortest_distances)
         t1 = time.time()
-        _, weight2 = dijkstra_routing(sn, en, lst, state)
+        _, weight2 = dijkstra_routing(sn, en, lst, shortest_distances)
         t2 = time.time()
-        _, weight3 = brute_force_routing(sn, en, lst, state)
+        _, weight3 = brute_force_routing(sn, en, lst, shortest_distances)
         t3 = time.time()
-        _, weight4 = branch_bound_pc(sn, en, lst, state, "single-link")
+        _, weight4 = branch_bound_pc(sn, en, lst, shortest_distances, "single-link")
         t4 = time.time()
-        _, weight5 = branch_bound_pc(sn, en, lst, state, "nearest-neighbor")
+        _, weight5 = branch_bound_pc(
+            sn, en, lst, shortest_distances, "nearest-neighbor"
+        )
         t5 = time.time()
 
         tt1 += t1 - t0

@@ -14,7 +14,7 @@ class Entity:
         end_node: int,
         time: DateTime,
         state: OSMGraph,
-        event_fn: Optional[Callable[[Events, dict[str, Any]], None]] = None,
+        event_fn: Callable[[Events, dict[str, Any]], None],
     ):
         self.id = Entity._uid
         self.start_node, self.end_node = start_node, end_node
@@ -25,11 +25,7 @@ class Entity:
         self.shortest_distance = self.state.shortest_distance(start_node, end_node)
         self.distance_paid_for = self.state.shortest_path_distance(start_node, end_node)
         self.single_trip_distance = self.distance_paid_for
-        self._event_fn = event_fn
-
-    def _post_event(self, event_type: Events, dict: dict[str, Any] = {}):
-        if self._event_fn:
-            self._event_fn(event_type, dict)
+        self._post_event = event_fn
 
     def complete(self, time: DateTime):
         self.completed_time = time
@@ -50,7 +46,7 @@ class Rider(Entity):
         end_node: int,
         time: DateTime,
         state: OSMGraph,
-        event_fn: Optional[Callable[[Events, dict[str, Any]], None]] = None,
+        event_fn: Callable[[Events, dict[str, Any]], None],
     ):
         super().__init__(start_node, end_node, time, state, event_fn)
         self.position = self.state.graph.get_node_data(start_node)
@@ -91,8 +87,8 @@ class Driver(Entity):
         end_node: int,
         time: DateTime,
         state: OSMGraph,
+        event_fn: Callable[[Events, dict[str, Any]], None],
         passenger_seats: int = 4,
-        event_fn: Optional[Callable[[Events, dict[str, Any]], None]] = None,
     ):
         super().__init__(start_node, end_node, time, state, event_fn)
         self.passenger_seats, self.vacancies = passenger_seats, passenger_seats
@@ -138,6 +134,24 @@ class Driver(Entity):
             rider.match_driver(self.id, rider_cost, time)
             self.riders.add(rider)
             self._post_event(Events.RiderMatch, {"driver": self, "rider": rider})
+
+    def match_rider(
+        self,
+        cost: float,
+        rider: tuple[Rider, float],
+        node_route: list[int],
+        time: DateTime,
+    ):
+        if self.vacancies == 0:
+            return
+
+        self.distance_paid_for = cost
+        rid, rider_cost = rider
+        self.vacancies -= 1
+        rid.match_driver(self.id, rider_cost, time)
+        self.riders.add(rid)
+        self.route = self.__compute_route(node_route)
+        self._post_event(Events.RiderMatch, {"driver": self, "rider": rid})
 
     def pick_up(self, rider: Rider, time: DateTime):
         rider.board(time)
