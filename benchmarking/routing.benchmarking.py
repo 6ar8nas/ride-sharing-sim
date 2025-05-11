@@ -14,16 +14,20 @@ iterations = 100
 intermediary_nodes = 10
 shortest_distances = state.build_shortest_path_distances()
 
-for elem_count in range(0, intermediary_nodes + 1, 2):
+node_indices = np.array(state.graph.node_indices(), dtype=int)
+sn, en = np.random.choice(node_indices, size=2, replace=True)
+choices = np.random.choice(node_indices, size=4, replace=True)
+lst = np.stack((choices[::2], choices[1::2]), axis=1, dtype=int)
+# Eager compile of the njit function
+held_karp_pc(sn, en, lst, shortest_distances)
+
+for elem_count in range(12, intermediary_nodes + 1, 2):
     tt1, tt2, tt3, tt4, tt5 = 0, 0, 0, 0, 0
     tw1, tw2, tw3, tw4, tw5 = 0, 0, 0, 0, 0
-    node_indices = np.array(state.graph.node_indices(), dtype=int)
-    sn, en = np.random.choice(node_indices, size=2, replace=True)
-    choices = np.random.choice(node_indices, size=elem_count, replace=True)
-    lst = np.stack((choices[::2], choices[1::2]), axis=1, dtype=int)
-    # Eager compile of the njit function
-    held_karp_pc(sn, en, lst, shortest_distances)
     for i in range(iterations):
+        sn, en = np.random.choice(node_indices, size=2, replace=True)
+        choices = np.random.choice(node_indices, size=elem_count, replace=True)
+        lst = np.stack((choices[::2], choices[1::2]), axis=1, dtype=int)
 
         t0 = time.time()
         _, weight1 = held_karp_pc(sn, en, lst, shortest_distances)
