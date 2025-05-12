@@ -151,7 +151,10 @@ def calculate_driver_statistics(drivers: list[Driver]) -> dict:
 
 
 def calculate_statistics(
-    riders: list[Rider], drivers: list[Driver], current_time: Optional[DateTime]
+    riders: list[Rider],
+    drivers: list[Driver],
+    current_time: Optional[DateTime],
+    fps: float,
 ) -> dict:
     rider_stats = calculate_rider_statistics(riders)
     driver_stats = calculate_driver_statistics(drivers)
@@ -172,6 +175,7 @@ def calculate_statistics(
         | driver_stats
         | {
             "simulation_runtime": current_time,
+            "fps": fps,
             "seat_occupancy_rate": (
                 total_passengers / total_seats if total_seats else None
             ),

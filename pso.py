@@ -81,7 +81,7 @@ class RideSharingPSOInstance:
         unmatched = {r.id: r for r in riders}
         candidates: list[tuple[Driver, list[Rider], float, list[int], float]] = []
         # ThreadPoolExecutor actually doesn't do anything with CPU-bound operations
-        # Just imitating parallelization with this here
+        # Just imitating parallelization with this here. Benchmark-ready version includes parallelization.
         with ThreadPoolExecutor() as executor:
             futures = [
                 executor.submit(self._get_driver_candidate, dr, riders, unmatched)
@@ -117,15 +117,13 @@ class RideSharingPSOInstance:
             half_savings = actual_savings * 0.5
             driver_cost = dr.distance_paid_for - half_savings
             dr.match_riders(
-                (
-                    (dr, driver_cost),
-                    [
-                        (rid, (rid.distance_paid_for / riders_dist) * half_savings)
-                        for rid in unmatched_riders
-                    ],
-                    route,
-                    time,
-                )
+                driver_cost,
+                [
+                    (rid, (rid.distance_paid_for / riders_dist) * half_savings)
+                    for rid in unmatched_riders
+                ],
+                route,
+                time,
             )
             expected_savings += actual_savings
             matches_count += len(unmatched_riders)
@@ -140,6 +138,7 @@ class RideSharingPSOInstance:
     ) -> Optional[tuple[Driver, list[Rider], float, list[int], float]]:
         if (
             driver.vacancies <= 0
+            or driver.current_edge is None
             or driver.current_edge.edge.ending_node_index == driver.end_node
         ):
             return None

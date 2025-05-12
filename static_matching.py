@@ -54,4 +54,4 @@ def static_rider_matching(
         matches += 1
         expected_savings += best_heuristic
 
-    return len(matches), expected_savings
+    return matches, expected_savings

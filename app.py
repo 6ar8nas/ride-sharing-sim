@@ -10,6 +10,7 @@ from entity import Driver, Rider
 from pso import RideSharingPSOInstance
 from simulation_gen import SimulationGenerator
 from state import SimulationState
+from static_matching import static_rider_matching
 from stats import calculate_statistics
 
 os.environ["SDL_VIDEO_CENTERED"] = "1"
@@ -30,7 +31,10 @@ clock = pygame.time.Clock()
 running = True
 frame_rate = 30
 simulation_speed = 4
+is_matching = False
 
+fps_total = 0.0
+fps_records = 0
 state = SimulationState("Vilnius, Lithuania", screen_size, frame_rate, simulation_speed)
 sg = SimulationGenerator(state)
 drivers: set[Driver] = set()
@@ -86,7 +90,13 @@ while running:
         if rider.cancel_time <= current_time and rider.matched_time is None:
             rider.cancel(current_time)
 
-    pso_matcher.match_riders(idle_riders, drivers, current_time)
+    if not is_matching:
+        is_matching = True
+        try:
+            # Ensure only a single matching instance is running at a time
+            static_rider_matching(idle_riders, drivers, state, current_time)
+        finally:
+            is_matching = False
 
     for driver in drivers:
         driver.move(state.speed_ratio, current_time)
@@ -113,6 +123,10 @@ while running:
             )
     screen.blit(background, (0, 0))
     screen.blit(font.render(str(current_time.day_time), 1, Colors.Text.value), (5, 5))
+    fps = clock.get_fps()
+    fps_total += fps
+    fps_records += 1
+    screen.blit(font.render(f"{fps:.2f}", 1, Colors.Text.value), (5, 25))
     for driver in drivers:
         if driver.route and driver.current_edge is not None:
             route = [
@@ -150,6 +164,9 @@ pygame.quit()
 
 # Generate total statistics
 stats = calculate_statistics(
-    rider_archive | idle_riders | waiting_riders, driver_archive | drivers, current_time
+    rider_archive | idle_riders | waiting_riders,
+    driver_archive | drivers,
+    current_time,
+    fps_total / max(fps_records, 1),
 )
 pprint(stats)
