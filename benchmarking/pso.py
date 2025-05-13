@@ -53,8 +53,9 @@ def pso_match_riders(
     c1_step: float = 0.0,
     c2_start: float = 1.49618,
     c2_step: float = 0.0,
-) -> tuple[List, int, float]:
+) -> tuple[List, int, float, List]:
     matches = List.empty_list(match_type)
+    iters = List.empty_list(int64)
     matches_count = 0
     expected_savings = 0.0
     unmatched = Dict.empty(key_type=types.int64, value_type=rider_type)
@@ -63,7 +64,7 @@ def pso_match_riders(
 
     results = List.empty_list(candidate_type)
     for _ in range(len(drivers)):
-        results.append(Candidate(None, None, 0.0, None, 0.0))
+        results.append(Candidate(None, None, 0.0, None, 0.0, 0))
 
     for i in prange(len(drivers)):
         results[i] = get_driver_candidate(
@@ -121,8 +122,9 @@ def pso_match_riders(
         )
         expected_savings += actual_savings
         matches_count += len(unmatched_riders)
+        iters.append(candidate.iter)
 
-    return matches, matches_count, expected_savings
+    return matches, matches_count, expected_savings, iters
 
 
 @njit
@@ -138,7 +140,7 @@ def get_driver_candidate(
     c2_step: float,
 ) -> Candidate:
     if driver.vacancies <= 0 or driver.start_node == driver.end_node:
-        return Candidate(None, None, 0.0, None, 0.0)
+        return Candidate(None, None, 0.0, None, 0.0, 0)
 
     orig_dist = shortest_lengths[driver.start_node][driver.end_node]
 
@@ -156,9 +158,9 @@ def get_driver_candidate(
         compat.append(rider)
 
     if len(compat) == 0:
-        return Candidate(None, None, 0.0, None, 0.0)
+        return Candidate(None, None, 0.0, None, 0.0, 0)
 
-    selected, savings, route, route_cost = driver_pso(
+    selected, savings, route, route_cost, best_iter = driver_pso(
         driver,
         compat,
         shortest_lengths,
@@ -170,9 +172,9 @@ def get_driver_candidate(
         c2_step,
     )
     if len(selected) == 0:
-        return Candidate(None, None, 0.0, None, 0.0)
+        return Candidate(None, None, 0.0, None, 0.0, 0)
 
-    return Candidate(driver, selected, savings, route, route_cost)
+    return Candidate(driver, selected, savings, route, route_cost, best_iter)
 
 
 @njit
@@ -187,13 +189,13 @@ def driver_pso(
     c2_start: float,
     c2_step: float,
     num_particles: int = 30,
-    iterations: int = 50,
-    min_improv_particles: int = 5,
-    max_no_improv_iter: int = 5,
-) -> tuple[List, float, np.ndarray, float]:
+    iterations: int = 300,
+    min_improv_particles: int = 0,
+    max_no_improv_iter: int = 300,
+) -> tuple[List, float, np.ndarray, float, int]:
     num_riders = len(riders)
     if num_riders == 0:
-        return List.empty_list(rider_type), 0.0, List.empty_list(int64), 1e18
+        return List.empty_list(rider_type), 0.0, List.empty_list(int64), 1e18, 0
 
     swarm = np.empty((num_particles, num_riders), dtype=np.float64)
     velocities = np.empty((num_particles, num_riders), dtype=np.float64)
@@ -220,6 +222,7 @@ def driver_pso(
             gb_index = i
     gbest_pos = pbest[gb_index].copy()
     gbest_val = (best_val[0], best_val[1], best_val[2])
+    gbest_iter = 0
     no_improv_iter = 0
     for it in range(iterations):
         no_improv_iter += 1
@@ -249,6 +252,7 @@ def driver_pso(
                 improv_particles += 1
                 if score[0] > gbest_val[0]:
                     gbest_val = score
+                    gbest_iter = it
                     gbest_pos = pos.copy()
                     no_improv_iter = 0
 
@@ -263,7 +267,7 @@ def driver_pso(
     rids = List.empty_list(rider_type)
     for i in best_indices:
         rids.append(riders[i])
-    return rids, *gbest_val
+    return rids, *gbest_val, gbest_iter
 
 
 @njit
