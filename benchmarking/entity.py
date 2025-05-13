@@ -92,23 +92,25 @@ candidate_spec = [
     ("savings", float64),
     ("route", types.Optional(types.ListType(int64))),
     ("cost", float64),
+    ("iter", int64),
 ]
 
 
 @jitclass(candidate_spec)
 class Candidate:
-    def __init__(self, driver, riders, savings, route, cost):
+    def __init__(self, driver, riders, savings, route, cost, iter):
         self.driver = driver
         self.riders = riders
         self.savings = savings
         self.route = route
         self.cost = cost
+        self.iter = iter
 
 
 sample_int_list = List.empty_list(int64)
 sample_int_list.append(51)
 sample_int_list.append(13)
 sample_candidate = Candidate(
-    sample_driver, sample_rider_list, 51.12, sample_int_list, 192.41
+    sample_driver, sample_rider_list, 51.12, sample_int_list, 192.41, 12
 )
 candidate_type = typeof(sample_candidate)

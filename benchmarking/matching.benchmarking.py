@@ -12,6 +12,7 @@ from pso import pso_match_riders
 from static_matching import static_rider_matching
 from simulation_gen import SimulationGenerator
 from numba.typed import List
+from numba import int64
 
 state = OSMGraph("Vilnius, Lithuania")
 shortest_lengths = state.build_shortest_path_distances()
@@ -32,18 +33,18 @@ pso_match_riders(
 # endregion
 
 param_sets = [
-    ("Static", ()),
-    ("PSO", ((0.7289, 0.0), (1.49618, 0.0), (1.49618, 0.0))),
+    # ("Static", ()),
     ("PSO", ((0.9, -0.5), (2.0, 0.0), (2.0, 0.0))),
+    ("PSO", ((0.7289, 0.0), (1.49618, 0.0), (1.49618, 0.0))),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0))),
     ("PSO", ((0.9, -0.5), (2.5, -2.0), (0.5, 2.0))),
 ]
 
 iterations = 3
 max_drivers_count = 50
-max_riders_count = 100
+max_riders_count = 500
 
-drivers_step = max_drivers_count // 5
-drivers_step = max_drivers_count // 5
+drivers_step = max_drivers_count
 drivers = List.empty_list(driver_type)
 for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
     for i in range(drivers_count - len(drivers)):
@@ -67,6 +68,7 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
         print(f"\n--- Drivers: {drivers_count}, Riders: {riders_count} ---")
         for model, params in param_sets:
             total_savings, total_matches, total_time = 0.0, 0.0, 0.0
+            iters_list = List.empty_list(int64)
 
             for _ in range(iterations):
                 riders_copy = [rider_copy(rider) for rider in riders]
@@ -76,7 +78,7 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
                     c1_start, c1_step = params[1]
                     c2_start, c2_step = params[2]
                     t0 = time.time()
-                    _, matches, savings = pso_match_riders(
+                    _, matches, savings, iters = pso_match_riders(
                         riders_copy,
                         drivers_copy,
                         shortest_lengths,
@@ -88,6 +90,8 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
                         c2_step,
                     )
                     t1 = time.time()
+                    for value in iters:
+                        iters_list.append(value)
                 elif model == "Static":
                     t0 = time.time()
                     _, matches, savings = static_rider_matching(
@@ -103,6 +107,11 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
             avg_savings = total_savings / iterations
             avg_matches = total_matches / iterations
 
+            total = 0.0
+            for value in iters_list:
+                total += value
+            avg_iter = total / max(len(iters_list), 1)
+
             param_string = ""
             if model == "PSO":
                 param_string = f"w=({params[0][0]:4.2f}, {params[0][1]:5.2f}), c1=({params[1][0]:4.2f}, {params[1][1]:5.2f}), c2=({params[2][0]:4.2f}, {params[2][1]:5.2f}) | "
@@ -111,5 +120,5 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
 
             print(
                 f"{param_string}"
-                f"time={avg_time:6.2f}s, savings={avg_savings:10.2f}, matches={avg_matches:6.1f}"
+                f"time={avg_time:6.2f}s, savings={avg_savings:10.2f}, matches={avg_matches:6.1f}, avg_iter={avg_iter:6.1f}"
             )
