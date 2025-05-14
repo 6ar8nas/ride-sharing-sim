@@ -33,11 +33,13 @@ pso_match_riders(
 # endregion
 
 param_sets = [
-    # ("Static", ()),
-    ("PSO", ((0.9, -0.5), (2.0, 0.0), (2.0, 0.0))),
-    ("PSO", ((0.7289, 0.0), (1.49618, 0.0), (1.49618, 0.0))),
-    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0))),
-    ("PSO", ((0.9, -0.5), (2.5, -2.0), (0.5, 2.0))),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 10),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 20),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 30),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 40),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 50),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 60),
+    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 70),
 ]
 
 iterations = 3
@@ -66,14 +68,20 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
             )
 
         print(f"\n--- Drivers: {drivers_count}, Riders: {riders_count} ---")
-        for model, params in param_sets:
+        for model, params, num_particles in param_sets:
             total_savings, total_matches, total_time = 0.0, 0.0, 0.0
             iters_list = List.empty_list(int64)
 
             for _ in range(iterations):
                 riders_copy = [rider_copy(rider) for rider in riders]
                 drivers_copy = [driver_copy(driver) for driver in drivers]
-                if model == "PSO":
+                if model == "Static":
+                    t0 = time.time()
+                    _, matches, savings = static_rider_matching(
+                        riders_copy, drivers_copy, shortest_lengths
+                    )
+                    t1 = time.time()
+                else:
                     w_start, w_step = params[0]
                     c1_start, c1_step = params[1]
                     c2_start, c2_step = params[2]
@@ -88,16 +96,11 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
                         c1_step,
                         c2_start,
                         c2_step,
+                        num_particles,
                     )
                     t1 = time.time()
                     for value in iters:
                         iters_list.append(value)
-                elif model == "Static":
-                    t0 = time.time()
-                    _, matches, savings = static_rider_matching(
-                        riders_copy, drivers_copy, shortest_lengths
-                    )
-                    t1 = time.time()
 
                 total_time += t1 - t0
                 total_savings += savings
@@ -114,9 +117,9 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
 
             param_string = ""
             if model == "PSO":
-                param_string = f"w=({params[0][0]:4.2f}, {params[0][1]:5.2f}), c1=({params[1][0]:4.2f}, {params[1][1]:5.2f}), c2=({params[2][0]:4.2f}, {params[2][1]:5.2f}) | "
+                param_string = f"{model:10}, num_particles={num_particles} | "
             elif model == "Static":
-                param_string = f"{'Static':50}  | "
+                param_string = f"{'Static':20}  | "
 
             print(
                 f"{param_string}"

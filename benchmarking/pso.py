@@ -53,6 +53,7 @@ def pso_match_riders(
     c1_step: float = 0.0,
     c2_start: float = 1.49618,
     c2_step: float = 0.0,
+    num_particles: int = 30,
 ) -> tuple[List, int, float, List]:
     matches = List.empty_list(match_type)
     iters = List.empty_list(int64)
@@ -77,6 +78,7 @@ def pso_match_riders(
             c1_step,
             c2_start,
             c2_step,
+            num_particles,
         )
 
     candidates = List.empty_list(candidate_type)
@@ -138,6 +140,7 @@ def get_driver_candidate(
     c1_step: float,
     c2_start: float,
     c2_step: float,
+    num_particles: int,
 ) -> Candidate:
     if driver.vacancies <= 0 or driver.start_node == driver.end_node:
         return Candidate(None, None, 0.0, None, 0.0, 0)
@@ -170,6 +173,7 @@ def get_driver_candidate(
         c1_step,
         c2_start,
         c2_step,
+        num_particles,
     )
     if len(selected) == 0:
         return Candidate(None, None, 0.0, None, 0.0, 0)
@@ -188,10 +192,10 @@ def driver_pso(
     c1_step: float,
     c2_start: float,
     c2_step: float,
-    num_particles: int = 30,
+    num_particles: int,
     iterations: int = 300,
     min_improv_particles: int = 0,
-    max_no_improv_iter: int = 300,
+    max_no_improv_iter: int = 20,
 ) -> tuple[List, float, np.ndarray, float, int]:
     num_riders = len(riders)
     if num_riders == 0:
