@@ -179,10 +179,10 @@ class RideSharingPSOInstance:
         self,
         driver: Driver,
         riders: list[Rider],
-        num_particles: int = 30,
+        num_particles: int = 40,
         iterations: int = 50,
-        min_improv_particles: int = 5,
-        max_no_improv_iter: int = 5,
+        min_improv_particles: int = 40,
+        max_no_improv_iter: int = 3,
     ) -> tuple[list[Rider], float, list[int], float]:
         num_riders = len(riders)
         if num_riders == 0:

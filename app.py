@@ -30,7 +30,7 @@ background: Optional[pygame.Surface] = None
 clock = pygame.time.Clock()
 running = True
 frame_rate = 30
-simulation_speed = 4
+simulation_speed = 1
 is_matching = False
 
 fps_total = 0.0

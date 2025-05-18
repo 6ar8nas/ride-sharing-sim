@@ -195,7 +195,7 @@ def driver_pso(
     num_particles: int,
     iterations: int = 300,
     min_improv_particles: int = 0,
-    max_no_improv_iter: int = 20,
+    max_no_improv_iter: int = 5,
 ) -> tuple[List, float, np.ndarray, float, int]:
     num_riders = len(riders)
     if num_riders == 0:

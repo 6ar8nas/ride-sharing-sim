@@ -33,41 +33,42 @@ pso_match_riders(
 # endregion
 
 param_sets = [
-    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 10),
-    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 20),
-    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 30),
+    ("Static", (), 0),
     ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 40),
-    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 50),
-    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 60),
-    ("PSO", ((0.9, 0.0), (2.5, -2.0), (0.5, 2.0)), 70),
 ]
 
-iterations = 3
-max_drivers_count = 50
-max_riders_count = 500
+iterations = 5
+max_drivers_count = 1000
+max_riders_count = 2500
 
-drivers_step = max_drivers_count
+drivers_step = max_drivers_count // 10
 drivers = List.empty_list(driver_type)
 for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
     for i in range(drivers_count - len(drivers)):
         drivers.append(sim_gen.new_driver())
 
     riders = List.empty_list(rider_type)
-    riders_step = max_riders_count // 5
+    riders_step = max_riders_count // 10
     for riders_count in range(riders_step, max_riders_count + 1, riders_step):
         for j in range(riders_count - len(riders)):
             riders.append(sim_gen.new_rider())
 
-        if i == 0 and j == 0:
+        if drivers_count == drivers_step and riders_count == riders_step:
+            # Warm up njit code
             riders_copy = [rider_copy(rider) for rider in riders]
             drivers_copy = [driver_copy(driver) for driver in drivers]
-            _, matches, savings = pso_match_riders(
+            pso_match_riders(
                 riders_copy,
                 drivers_copy,
                 shortest_lengths,
             )
 
-        print(f"\n--- Drivers: {drivers_count}, Riders: {riders_count} ---")
+            riders_copy = [rider_copy(rider) for rider in riders]
+            drivers_copy = [driver_copy(driver) for driver in drivers]
+            static_rider_matching(
+                riders_copy, drivers_copy, shortest_lengths
+            )
+
         for model, params, num_particles in param_sets:
             total_savings, total_matches, total_time = 0.0, 0.0, 0.0
             iters_list = List.empty_list(int64)
@@ -115,13 +116,6 @@ for drivers_count in range(drivers_step, max_drivers_count + 1, drivers_step):
                 total += value
             avg_iter = total / max(len(iters_list), 1)
 
-            param_string = ""
-            if model == "PSO":
-                param_string = f"{model:10}, num_particles={num_particles} | "
-            elif model == "Static":
-                param_string = f"{'Static':20}  | "
-
             print(
-                f"{param_string}"
-                f"time={avg_time:6.2f}s, savings={avg_savings:10.2f}, matches={avg_matches:6.1f}, avg_iter={avg_iter:6.1f}"
+                f"{drivers_count}, {riders_count}, {model}, {avg_time:.2f}, {avg_savings:.2f}, {avg_matches:.1f}, {avg_iter:.1f}"
             )
