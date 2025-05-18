@@ -71,5 +71,48 @@
         "radius": 3000
       }
     ]
+  },
+  {
+    "city": "Kaunas, Lithuania",
+    "osm_filters": "[\"highway\"~\"motorway|trunk|primary|secondary|teriatry|unclassified\"]",
+    "central_areas": [
+      {
+        "name": "New Town",
+        "center": { "x": 494574.146933, "y": 6084572.444079 },
+        "radius": 4000
+      },
+      {
+        "name": "Old Town",
+        "center": { "x": 492885.271205, "y": 6084052.141234 },
+        "radius": 1000
+      }
+    ],
+    "residential_areas": [
+      {
+        "name": "Dainava, Gričiupis, Žaliakalnis, Kalniečiai",
+        "center": { "x": 499305.281974, "y": 6086167.162599 },
+        "radius": 7000
+      },
+      {
+        "name": "Šilainiai, Vytėnai",
+        "center": { "x": 493075.39145, "y": 6088568.425587 },
+        "radius": 5000
+      },
+      {
+        "name": "Kaniūkai, Vilijampolė",
+        "center": { "x": 489902.608981, "y": 6087194.142471 },
+        "radius": 5000
+      },
+      {
+        "name": "Aleksotas",
+        "center": { "x": 492105.306731, "y": 6079935.636906 },
+        "radius": 6000
+      },
+      {
+        "name": "Šančiai, Panemunė",
+        "center": { "x": 498065.191001, "y": 6080188.650524 },
+        "radius": 6000
+      }
+    ]
   }
 ]
